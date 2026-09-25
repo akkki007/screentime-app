@@ -1,0 +1,19 @@
+{
+  "name": "@screentime/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "build": "bun build src/background.ts --outdir dist --target browser && bun build native-host/host.ts --outdir dist/native-host --target bun",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@screentime/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "typescript": "^5.6.3"
+  }
+}

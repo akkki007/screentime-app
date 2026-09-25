@@ -1,0 +1,7 @@
+{
+  "uuid": "screentime-focus@akkki007.github.io",
+  "name": "Screentime Focus Reporter",
+  "description": "Reports the focused window (app id, title, pid) to the Screentime tracker daemon over D-Bus. Does no tracking itself.",
+  "shell-version": ["45", "46", "47"],
+  "url": "https://github.com/akkki007/screentime-app"
+}

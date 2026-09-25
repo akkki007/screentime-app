@@ -1,0 +1,24 @@
+{
+  "name": "screentime-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first screentime and digital wellbeing tracker for Linux",
+  "license": "GPL-3.0-or-later",
+  "workspaces": ["apps/*", "packages/*", "extensions/browser"],
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun test",
+    "dev:daemon": "bun run --cwd apps/daemon dev",
+    "dev:desktop": "bun run --cwd apps/desktop dev"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.1.13",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

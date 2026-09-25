@@ -1,0 +1,20 @@
+[Unit]
+Description=Screentime tracker daemon
+Documentation=https://github.com/akkki007/screentime-app
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/screentime/daemon
+Restart=on-failure
+RestartSec=2
+# No network access needed or wanted: the daemon is local-only by design.
+# (Enforced here defensively as well as in code.)
+RestrictAddressFamilies=AF_UNIX
+ProtectSystem=strict
+ReadWritePaths=%h/.local/share/screentime %t/screentime
+NoNewPrivileges=true
+
+[Install]
+WantedBy=graphical-session.target

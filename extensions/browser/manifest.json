@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Screentime",
+  "version": "0.1.0",
+  "description": "Reports active tab domain/time to the local Screentime daemon. No data leaves your machine.",
+  "permissions": ["tabs", "activeTab", "nativeMessaging"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "screentime@akkki007.github.io"
+    }
+  }
+}

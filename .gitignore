@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Env / secrets
+.env
+.env.local
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Packaging output
+packaging/deb/*.deb
+packaging/appimage/*.AppImage
+*.AppDir/
+
+# Test / coverage
+coverage/

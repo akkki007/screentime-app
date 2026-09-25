@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Screentime
+Comment=Local-first screentime and digital wellbeing tracker
+Exec=/usr/bin/screentime
+Icon=io.github.akkki007.screentime
+Terminal=false
+Categories=Utility;
+StartupWMClass=screentime

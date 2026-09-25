@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["chrome", "bun"]
+  },
+  "include": ["src", "native-host"]
+}
