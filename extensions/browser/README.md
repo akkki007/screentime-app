@@ -32,4 +32,4 @@ bun run --cwd extensions/browser uninstall:host -- --browser all   # remove agai
 
 - The native host and its framing are tested, and a framed message was sent through the built host into a running daemon. **The extension has not yet been loaded in a real browser** — treat the browser-side half as unverified.
 - Ubuntu's Firefox is a **snap**, and snap confinement blocks native messaging unless the browser can reach the host through the desktop portal. If per-site time stays empty with Firefox from the snap store, that is the likely cause. Mozilla's own `.deb` or tarball builds and Chromium-family browsers installed from `.deb`s do not have this restriction.
-- The packaged host is a compiled Bun binary (~80 MB). It is only started while a browser is open.
+- The packaged host is a ~65 KB Bun script that runs on the runtime shipped with the app. It is only started while a browser is open.
