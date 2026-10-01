@@ -31,6 +31,7 @@ let sessions = $state<Session[]>([]);
 let yesterdaySoFar = $state(0);
 let dayStart = $state(startOfDay(Date.now()));
 let loadError = $state<string>();
+let loadedAt = $state(Date.now());
 
 const guard = latestOnly();
 
@@ -51,6 +52,7 @@ async function load() {
     sessions = timeline;
     yesterdaySoFar = yesterday;
     dayStart = start;
+    loadedAt = Date.now();
     loadError = undefined;
   } catch (err) {
     if (guard.isCurrent(ticket)) loadError = err instanceof Error ? err.message : String(err);
@@ -82,6 +84,38 @@ const slices = $derived(
   })),
 );
 
+let nowTs = $state(Date.now());
+$effect(() => {
+  const id = setInterval(() => {
+    nowTs = Date.now();
+  }, 1000);
+  return () => clearInterval(id);
+});
+
+/** Today's total as H:MM:SS, ticking while a window is being tracked. */
+const clock = $derived.by(() => {
+  const live =
+    store.status?.currentAppId && !store.status.paused && !store.status.idle ? nowTs - loadedAt : 0;
+  const secs = Math.floor((total + Math.max(0, live)) / 1000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return {
+    h: String(Math.floor(secs / 3600)),
+    m: p(Math.floor((secs % 3600) / 60)),
+    s: p(secs % 60),
+  };
+});
+
+const weekdayDay = new Date().toLocaleDateString(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+});
+const weekNumber = (() => {
+  const d = new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+})();
+
 const dateText = new Date().toLocaleDateString(undefined, {
   weekday: 'long',
   month: 'long',
@@ -89,64 +123,79 @@ const dateText = new Date().toLocaleDateString(undefined, {
 });
 </script>
 
-<div class="flex flex-col gap-5">
-	<header>
-		<h1 class="text-2xl font-semibold tracking-tight">Today</h1>
-		<p class="text-sm text-muted">{dateText}</p>
-	</header>
+<div class="flex flex-col gap-6">
+  <section class="grid items-end gap-6 lg:grid-cols-2">
+    <div>
+      <h1 class="text-[40px] leading-[1.05] font-normal tracking-tight">
+        Keep track of<br /><span class="text-muted/70">where your time goes</span>
+      </h1>
+      <p class="mt-3 text-sm text-muted">{dateText}</p>
+    </div>
+    <div class="text-right" aria-label="Screen time today">
+      <p class="text-[13px] text-muted">Screen time today</p>
+      <p class="text-[88px] leading-none font-extralight tracking-tighter tabular-nums">
+        {clock.h}<span class="text-muted/60">:</span>{clock.m}<span class="text-muted/50">:{clock.s}</span>
+      </p>
+    </div>
+  </section>
 
-	<NowCard />
+  {#if loadError}
+    <p class="rounded-2xl bg-bad/10 p-3 text-sm text-bad" role="alert">{loadError}</p>
+  {/if}
 
-	{#if loadError}
-		<p class="rounded-xl border border-bad/40 bg-bad/10 p-3 text-sm text-bad" role="alert">{loadError}</p>
-	{/if}
+  <div class="grid gap-5 lg:grid-cols-5">
+    <div class="flex flex-col gap-5 lg:col-span-2">
+      <NowCard />
+      <div class="grid grid-cols-2 gap-5">
+        <StatTile
+          label="Vs. yesterday"
+          value={`${delta >= 0 ? '+' : '−'}${formatShort(Math.abs(delta))}`}
+          hint={`${formatShort(yesterdaySoFar)} by this time`}
+          tone={delta > 0 ? 'bad' : delta < 0 ? 'good' : 'neutral'}
+        />
+        <StatTile
+          label="Most used"
+          value={topApp ? appLabel(topApp.key, store.appName(topApp.key)) : '—'}
+          hint={topApp ? formatDuration(topApp.ms) : undefined}
+        />
+      </div>
+      <div class="grid grid-cols-2 gap-5">
+        <StatTile look="orange" label="Today" value={weekdayDay} hint={`Week ${weekNumber}`} />
+        <StatTile look="sun" label="Productive" value={`${percent(productiveMs, total)}%`} hint={formatDuration(productiveMs)} />
+      </div>
+    </div>
 
-	<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-		<StatTile label="Screen time" value={formatDuration(total)} hint={total === 0 ? "Nothing yet today" : undefined} />
-		<StatTile
-			label="Vs. yesterday"
-			value={`${delta >= 0 ? "+" : "−"}${formatDuration(Math.abs(delta))}`}
-			hint={`${formatDuration(yesterdaySoFar)} by this time`}
-			tone={delta > 0 ? "bad" : delta < 0 ? "good" : "neutral"}
-		/>
-		<StatTile label="Productive" value={`${percent(productiveMs, total)}%`} hint={formatDuration(productiveMs)} />
-		<StatTile
-			label="Most used"
-			value={topApp ? appLabel(topApp.key, store.appName(topApp.key)) : "—"}
-			hint={topApp ? formatDuration(topApp.ms) : undefined}
-		/>
-	</div>
+    <div class="flex flex-col gap-5 lg:col-span-3">
+      <Card title="By hour">
+        <BarChart labels={hourLabels} values={hours} highlight={new Date().getHours()} height={200} />
+      </Card>
+      <Card title="By category">
+        <div class="flex items-center gap-6">
+          <Donut items={slices} centerTitle={formatShort(total)} centerSub="today" size={160} />
+          <ul class="grid min-w-0 flex-1 grid-cols-1 gap-2 text-[13px] sm:grid-cols-2">
+            {#each slices.slice(0, 6) as s (s.name)}
+              <li class="flex items-center gap-2">
+                <span class="size-2.5 shrink-0 rounded-full" style="background: {s.color}"></span>
+                <span class="flex-1 truncate">{s.name}</span>
+                <span class="rounded-full bg-accent/20 px-2 py-0.5 text-[11px] font-medium tabular-nums">{formatShort(s.value)}</span>
+              </li>
+            {/each}
+          </ul>
+        </div>
+      </Card>
+    </div>
+  </div>
 
-	<Card title="Timeline" subtitle="When you were active, coloured by category">
-		<Timeline {sessions} {dayStart} />
-	</Card>
+  <Card title="Timeline" subtitle="When you were active, coloured by category">
+    <Timeline {sessions} {dayStart} />
+  </Card>
 
-	<div class="grid gap-5 lg:grid-cols-5">
-		<Card title="By hour" class="lg:col-span-3">
-			<BarChart labels={hourLabels} values={hours} highlight={new Date().getHours()} />
-		</Card>
-		<Card title="By category" class="lg:col-span-2">
-			<div class="flex items-center gap-4">
-				<Donut items={slices} centerTitle={formatShort(total)} centerSub="today" size={150} />
-				<ul class="flex min-w-0 flex-1 flex-col gap-2 text-[13px]">
-					{#each slices.slice(0, 6) as s (s.name)}
-						<li class="flex items-center gap-2">
-							<span class="size-2.5 shrink-0 rounded-full" style="background: {s.color}"></span>
-							<span class="flex-1 truncate">{s.name}</span>
-							<span class="text-xs text-muted tabular-nums">{formatDuration(s.value)}</span>
-						</li>
-					{/each}
-				</ul>
-			</div>
-		</Card>
-	</div>
-
-	<div class="grid gap-5 lg:grid-cols-2">
-		<Card title="Top apps">
-			<UsageList rows={usage?.byApp ?? []} />
-		</Card>
-		<Card title="Top sites" subtitle="From the browser extension">
-			<UsageList rows={usage?.web ?? []} kind="domain" empty="No sites yet. Install the browser extension to see per-site time." />
-		</Card>
-	</div>
+  <div class="grid gap-5 lg:grid-cols-2">
+    <Card title="Top apps">
+      <UsageList rows={usage?.byApp ?? []} />
+    </Card>
+    <Card title="Top sites" subtitle="From the browser extension">
+      <UsageList rows={usage?.web ?? []} kind="domain" empty="No sites yet. Install the browser extension to see per-site time." />
+    </Card>
+  </div>
 </div>

@@ -1,8 +1,8 @@
 <script lang="ts">
 import LimitOverlay from './components/LimitOverlay.svelte';
 import Onboarding from './components/Onboarding.svelte';
-import Sidebar from './components/Sidebar.svelte';
 import Toasts from './components/Toasts.svelte';
+import TopNav from './components/TopNav.svelte';
 import { setBridge } from './lib/api';
 import { createBridge } from './lib/bridge';
 import { type ViewId, errorMessage, store } from './lib/store.svelte';
@@ -67,9 +67,9 @@ const needsOnboarding = $derived(
 {:else if !store.ready}
 	<main class="grid h-full place-items-center text-sm text-muted">Loading…</main>
 {:else}
-	<div class="flex h-full">
-		<Sidebar />
-		<main class="min-w-0 flex-1 overflow-y-auto">
+	<div class="flex h-full flex-col">
+		<TopNav />
+		<main class="min-h-0 flex-1 overflow-y-auto">
 			{#if !store.connected}
 				<div class="m-6 mb-0 flex items-start gap-3 rounded-xl border border-warn/40 bg-warn/10 p-4 text-[13px]" role="alert">
 					<span class="mt-0.5 text-warn">!</span>
@@ -84,7 +84,7 @@ const needsOnboarding = $derived(
 					</div>
 				</div>
 			{/if}
-			<div class="mx-auto max-w-5xl p-6">
+			<div class="mx-auto max-w-6xl px-8 pt-6 pb-10">
 				{#if store.connected || store.view === "settings"}
 					<View />
 				{:else}

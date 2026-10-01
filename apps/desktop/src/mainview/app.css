@@ -1,52 +1,65 @@
 @import "tailwindcss";
+@import "@fontsource-variable/outfit";
 
 /* Design tokens. Components use these, never raw colours, so light/dark stay in sync. */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --line: #e3e6eb;
-  --text: #0f172a;
-  --muted: #64748b;
-  --accent: #3b7bff;
-  --accent-soft: #e6eeff;
-  --good: #16a34a;
+  --bg: #fbeee0;
+  --bg-grad: radial-gradient(1200px 700px at 8% -10%, #fff2b8 0%, transparent 60%),
+    radial-gradient(1100px 800px at 100% 10%, #ffd2b8 0%, transparent 62%),
+    linear-gradient(160deg, #fdf3e3 0%, #f8e4d8 100%);
+  --surface: rgb(255 255 255 / 0.62);
+  --surface-2: rgb(255 255 255 / 0.55);
+  --line: rgb(60 30 10 / 0.08);
+  --text: #1a130d;
+  --muted: #8a7a6e;
+  --accent: #ff8f45;
+  --accent-soft: rgb(255 143 69 / 0.16);
+  --sun: #f2ee2c;
+  --dark: #1c1612;
+  --on-dark: #f7efe8;
+  --good: #1a9d55;
   --warn: #d97706;
   --bad: #dc2626;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 10px 30px -12px rgb(120 60 20 / 0.18);
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #0e1014;
-  --surface: #161a21;
-  --surface-2: #1d222b;
-  --line: #262c37;
-  --text: #e7e9ee;
-  --muted: #8d96a5;
-  --accent: #5b94ff;
-  --accent-soft: #1b2740;
+  --bg: #14100d;
+  --bg-grad: radial-gradient(1000px 600px at 5% -10%, #4a3516 0%, transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, #4b2a1b 0%, transparent 62%),
+    linear-gradient(160deg, #1b1511 0%, #120e0b 100%);
+  --surface: rgb(255 255 255 / 0.06);
+  --surface-2: rgb(255 255 255 / 0.07);
+  --line: rgb(255 255 255 / 0.09);
+  --text: #f5ece4;
+  --muted: #a39384;
+  --accent: #ff9a55;
+  --accent-soft: rgb(255 154 85 / 0.18);
+  --dark: #0b0907;
   --good: #3ccf78;
-  --warn: #f0a23b;
   --bad: #f2655f;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 12px 30px -14px rgb(0 0 0 / 0.7);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e1014;
-    --surface: #161a21;
-    --surface-2: #1d222b;
-    --line: #262c37;
-    --text: #e7e9ee;
-    --muted: #8d96a5;
-    --accent: #5b94ff;
-    --accent-soft: #1b2740;
+    --bg: #14100d;
+    --bg-grad: radial-gradient(1000px 600px at 5% -10%, #4a3516 0%, transparent 60%),
+      radial-gradient(1000px 700px at 100% 0%, #4b2a1b 0%, transparent 62%),
+      linear-gradient(160deg, #1b1511 0%, #120e0b 100%);
+    --surface: rgb(255 255 255 / 0.06);
+    --surface-2: rgb(255 255 255 / 0.07);
+    --line: rgb(255 255 255 / 0.09);
+    --text: #f5ece4;
+    --muted: #a39384;
+    --accent: #ff9a55;
+    --accent-soft: rgb(255 154 85 / 0.18);
+    --dark: #0b0907;
     --good: #3ccf78;
-    --warn: #f0a23b;
     --bad: #f2655f;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 12px 30px -14px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
 }
@@ -63,7 +76,10 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --font-sans: "Inter", "Cantarell", "Ubuntu", system-ui, sans-serif;
+  --color-sun: var(--sun);
+  --color-dark: var(--dark);
+  --color-on-dark: var(--on-dark);
+  --font-sans: "Outfit Variable", system-ui, sans-serif;
 }
 
 html,
@@ -75,9 +91,11 @@ body,
 body {
   margin: 0;
   background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
