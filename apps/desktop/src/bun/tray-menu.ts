@@ -6,6 +6,7 @@ export type TrayItem =
 
 export type TrayAction =
   | { kind: 'open' }
+  | { kind: 'widget' }
   | { kind: 'pause'; minutes: number }
   | { kind: 'resume' }
   | { kind: 'focus'; minutes: number }
@@ -13,12 +14,35 @@ export type TrayAction =
   | { kind: 'quit' };
 
 /** The tray menu for the current daemon state. Controls are disabled while the daemon is down. */
-export function buildTrayMenu(status: TrackerStatus | undefined, connected: boolean): TrayItem[] {
+export function buildTrayMenu(
+  status: TrackerStatus | undefined,
+  connected: boolean,
+  info: TrayInfo = {},
+): TrayItem[] {
   const live = connected && status !== undefined;
-  const items: TrayItem[] = [
-    { type: 'normal', label: 'Open Screentime', action: 'open' },
+  const items: TrayItem[] = [];
+
+  // Live status as disabled rows: the native menu can't be styled, but it can inform.
+  items.push({
+    type: 'normal',
+    label: statusLine(status, connected, info),
+    action: 'noop',
+    enabled: false,
+  });
+  if (info.todayLabel && connected) {
+    items.push({
+      type: 'normal',
+      label: `Today  ${info.todayLabel}`,
+      action: 'noop',
+      enabled: false,
+    });
+  }
+  items.push(
     { type: 'separator' },
-  ];
+    { type: 'normal', label: 'Quick panel', action: 'widget' },
+    { type: 'normal', label: 'Open dashboard', action: 'open' },
+    { type: 'separator' },
+  );
 
   if (status?.paused) {
     items.push({ type: 'normal', label: 'Resume tracking', action: 'resume', enabled: live });
@@ -45,10 +69,30 @@ export function buildTrayMenu(status: TrackerStatus | undefined, connected: bool
   return items;
 }
 
+export type TrayInfo = {
+  /** Display name of the app being tracked. */
+  appName?: string;
+  /** Today's total, already formatted (e.g. "4h 47m"). */
+  todayLabel?: string;
+  /** Formats a resume time for the paused line. */
+  resumeLabel?: string;
+};
+
+function statusLine(status: TrackerStatus | undefined, connected: boolean, info: TrayInfo): string {
+  if (!connected) return 'Daemon not running';
+  if (!status) return 'Connecting…';
+  if (status.paused) return info.resumeLabel ? `Paused until ${info.resumeLabel}` : 'Paused';
+  if (status.focusMode.active) return 'Focus mode on';
+  if (status.idle) return 'Idle';
+  return info.appName ? `Tracking  ${info.appName}` : 'Tracking';
+}
+
 /** Parses a menu action string, returning undefined for anything unrecognised. */
 export function parseTrayAction(action: string | undefined): TrayAction | undefined {
   if (!action) return undefined;
-  if (action === 'open' || action === 'resume' || action === 'quit') return { kind: action };
+  if (action === 'open' || action === 'widget' || action === 'resume' || action === 'quit') {
+    return { kind: action };
+  }
   if (action === 'focus-stop') return { kind: 'focus-stop' };
 
   const match = /^(pause|focus):(\d+)$/.exec(action);
@@ -57,6 +101,13 @@ export function parseTrayAction(action: string | undefined): TrayAction | undefi
     if (minutes > 0) return { kind: match[1] as 'pause' | 'focus', minutes };
   }
   return undefined;
+}
+
+/** Which tray icon (a file in `src/assets`, without extension) shows the current state. */
+export function trayIconFor(status: TrackerStatus | undefined, connected: boolean): string {
+  if (!connected || !status) return 'tray-offline';
+  if (status.paused || status.focusMode.active) return status.paused ? 'tray-paused' : 'tray-focus';
+  return 'tray';
 }
 
 /** Tray tooltip/title: what is being tracked right now. */

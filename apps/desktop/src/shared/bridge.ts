@@ -15,6 +15,10 @@ export type BridgeSchema = {
         params: { format: 'csv' | 'json'; from?: number; to?: number };
         response: { path: string };
       };
+      /** Show (or raise) the full dashboard window. */
+      openDashboard: { params: undefined; response: undefined };
+      /** Quit the UI. The daemon keeps tracking. */
+      quitApp: { params: undefined; response: undefined };
       /** Current daemon connection state, for the first paint. */
       connectionState: { params: undefined; response: ConnectionState };
     };

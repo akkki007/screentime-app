@@ -144,3 +144,10 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The quick panel window is transparent: only its glass panels are drawn. */
+html[data-view="widget"],
+html[data-view="widget"] body {
+  background: transparent;
+  background-image: none;
+}

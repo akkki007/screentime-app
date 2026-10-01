@@ -18,6 +18,8 @@ const actions = (items: ReturnType<typeof buildTrayMenu>) =>
 describe('buildTrayMenu', () => {
   test('offers pause and focus when tracking normally', () => {
     expect(actions(buildTrayMenu(status(), true))).toEqual([
+      'noop',
+      'widget',
       'open',
       'pause:15',
       'pause:60',
@@ -46,14 +48,45 @@ describe('buildTrayMenu', () => {
   });
 });
 
+describe('status rows', () => {
+  const first = (items: ReturnType<typeof buildTrayMenu>) =>
+    items[0]?.type === 'normal' ? items[0] : undefined;
+
+  test('describe what is happening, and are disabled', () => {
+    const label = (st: TrackerStatus | undefined, connected: boolean, info = {}) =>
+      first(buildTrayMenu(st, connected, info))?.label;
+    expect(label(status(), true, { appName: 'Firefox' })).toBe('Tracking  Firefox');
+    expect(label(status({ paused: true }), true, { resumeLabel: '15:30' })).toBe(
+      'Paused until 15:30',
+    );
+    expect(label(status({ idle: true }), true)).toBe('Idle');
+    expect(label(status({ focusMode: { active: true, until: 1 } }), true)).toBe('Focus mode on');
+    expect(label(undefined, false)).toBe('Daemon not running');
+    expect(first(buildTrayMenu(status(), true))?.enabled).toBe(false);
+  });
+
+  test('show today only while connected', () => {
+    const rows = (connected: boolean) =>
+      buildTrayMenu(status(), connected, { todayLabel: '4h 47m' }).flatMap((i) =>
+        i.type === 'normal' ? [i.label] : [],
+      );
+    expect(rows(true)).toContain('Today  4h 47m');
+    expect(rows(false)).not.toContain('Today  4h 47m');
+  });
+});
+
 describe('parseTrayAction', () => {
   test('parses every action the menu can produce', () => {
     for (const item of [
       ...buildTrayMenu(status(), true),
       ...buildTrayMenu(status({ paused: true, focusMode: { active: true, until: 1 } }), true),
     ]) {
-      if (item.type === 'normal') expect(parseTrayAction(item.action)).toBeDefined();
+      if (item.type === 'normal' && item.enabled !== false) {
+        expect(parseTrayAction(item.action)).toBeDefined();
+      }
     }
+    expect(parseTrayAction('widget')).toEqual({ kind: 'widget' });
+    expect(parseTrayAction('noop')).toBeUndefined();
     expect(parseTrayAction('pause:15')).toEqual({ kind: 'pause', minutes: 15 });
     expect(parseTrayAction('focus:25')).toEqual({ kind: 'focus', minutes: 25 });
   });

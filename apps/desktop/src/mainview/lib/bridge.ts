@@ -11,6 +11,8 @@ export type Bridge = {
   saveExport(args: { format: 'csv' | 'json'; from?: number; to?: number }): Promise<{
     path: string;
   }>;
+  openDashboard(): Promise<void>;
+  quitApp(): Promise<void>;
   connection(): Promise<ConnectionState>;
   onEvent(handler: (name: string, payload: unknown) => void): void;
   onConnection(handler: (state: ConnectionState) => void): void;
@@ -50,6 +52,8 @@ export async function createBridge(): Promise<Bridge> {
     mode: 'electrobun',
     call: (method, params) => request.daemon({ method, params }),
     saveExport: (args) => request.saveExport(args),
+    openDashboard: async () => void (await request.openDashboard(undefined)),
+    quitApp: async () => void (await request.quitApp(undefined)),
     connection: () => request.connectionState(undefined),
     onEvent: (h) => {
       eventHandler = h;

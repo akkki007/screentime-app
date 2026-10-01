@@ -350,6 +350,8 @@ export function createMockBridge(): Bridge {
       return handler(p);
     },
     saveExport: async ({ format }) => ({ path: `~/Downloads/screentime-fixture.${format}` }),
+    openDashboard: async () => console.info('[mock] open dashboard'),
+    quitApp: async () => console.info('[mock] quit'),
     connection: async () => (connected ? { connected: true } : { connected: false }),
     onEvent: (h) => {
       eventHandler = h;

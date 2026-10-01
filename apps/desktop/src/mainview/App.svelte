@@ -1,6 +1,7 @@
 <script lang="ts">
 import LimitOverlay from './components/LimitOverlay.svelte';
 import Onboarding from './components/Onboarding.svelte';
+import QuickPanel from './components/QuickPanel.svelte';
 import Toasts from './components/Toasts.svelte';
 import TopNav from './components/TopNav.svelte';
 import { setBridge } from './lib/api';
@@ -14,6 +15,11 @@ import WeekView from './views/WeekView.svelte';
 import WellbeingView from './views/WellbeingView.svelte';
 
 let fatal = $state<string>();
+const widget = location.hash === '#widget';
+if (widget) {
+  document.documentElement.dataset.view = 'widget';
+  document.documentElement.dataset.theme = 'dark';
+}
 
 (async () => {
   try {
@@ -66,6 +72,8 @@ const needsOnboarding = $derived(
 	</main>
 {:else if !store.ready}
 	<main class="grid h-full place-items-center text-sm text-muted">Loading…</main>
+{:else if widget}
+  <QuickPanel />
 {:else}
 	<div class="flex h-full flex-col">
 		<TopNav />
