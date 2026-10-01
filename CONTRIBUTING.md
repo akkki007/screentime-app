@@ -6,7 +6,11 @@ Thanks for considering a contribution to Screentime! This project is a Bun works
 
 ```bash
 bun install
+bun run dev:daemon   # tracker daemon (needs the GNOME extension on GNOME/Wayland)
+bun run dev:desktop  # dashboard; first run downloads the Electrobun toolchain (Hutch)
 ```
+
+The dashboard can also be developed with no daemon and no Electrobun: see [`apps/desktop/README.md`](apps/desktop/README.md#preview-without-electrobun-or-a-daemon).
 
 Each package under `apps/`, `adapters/`, `extensions/`, and `packages/` can be built and tested independently.
 
@@ -17,7 +21,7 @@ Each package under `apps/`, `adapters/`, `extensions/`, and `packages/` can be b
 3. Run the checks locally before opening a PR:
    ```bash
    bun run lint
-   bun run typecheck
+   bun run typecheck   # the desktop app needs the Hutch toolchain (see apps/desktop/README.md)
    bun test
    ```
 4. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, ...).
@@ -30,6 +34,7 @@ Look for issues labeled [`good first issue`](../../labels/good%20first%20issue).
 - **New desktop adapters** — implement the `FocusProvider` interface (see `packages/shared/src/focus.ts`) for a new compositor or window manager. See [`docs/adapters.md`](docs/adapters.md).
 - **App categories** — help classify common Linux apps as productive/unproductive.
 - **UI translations** — the Svelte dashboard in `apps/desktop`.
+- **Verification we could not do** — the browser extension in a real browser, the X11 adapter on an X11 session, the GNOME extension on GNOME 45–49, a real suspend/resume, and a 24 h accuracy run. See the status table in `docs/architecture.md`.
 
 ## Design principles to respect
 

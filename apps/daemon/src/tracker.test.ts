@@ -91,6 +91,10 @@ describe('app identity', () => {
   test('strips the .desktop suffix', () => {
     expect(normalizeAppId('org.mozilla.firefox.desktop')).toBe('org.mozilla.firefox');
     expect(normalizeAppId('Xterm')).toBe('Xterm');
+    // GNOME's synthetic per-window IDs must not each become their own "app".
+    expect(normalizeAppId('window:28')).toBe('unknown');
+    expect(normalizeAppId('window:7')).toBe('unknown');
+    expect(normalizeAppId('window:manager')).toBe('window:manager');
     t.focus('org.gnome.Ptyxis.desktop');
     expect(t.rows()[0]?.app_id).toBe('org.gnome.Ptyxis');
   });
@@ -113,7 +117,8 @@ describe('merge rule', () => {
     t.advance(1_000);
     t.focus('b');
     const [a, b] = t.rows();
-    expect(a).toMatchObject({ app_id: 'a', start_ts: start, end_ts: start + 4_000 });
+    // ends at the switch (5 s in), not at the earlier 4 s heartbeat
+    expect(a).toMatchObject({ app_id: 'a', start_ts: start, end_ts: start + 5_000 });
     expect(b).toMatchObject({ app_id: 'b', start_ts: t.now() });
   });
 });
@@ -164,5 +169,83 @@ describe('suspend', () => {
     const [before, after] = t.rows();
     expect(before).toMatchObject({ start_ts: start, end_ts: start + 5_000 });
     expect(after?.start_ts).toBe(t.now());
+  });
+});
+
+describe('pause', () => {
+  test('stops counting, remembers focus, and resumes on the first heartbeat after expiry', () => {
+    t.focus('a');
+    t.advance(5_000);
+    t.beat();
+    const until = t.tracker.pause(10);
+    expect(until).toBe(t.now() + 10 * 60_000);
+    expect(t.tracker.state()).toMatchObject({ paused: true, resumeAt: until, currentAppId: null });
+
+    t.advance(60_000);
+    t.focus('b'); // switching while paused is remembered but not tracked
+    expect(t.rows()).toHaveLength(1);
+
+    t.advance(10 * 60_000);
+    t.beat();
+    const rows = t.rows();
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ app_id: 'b', start_ts: t.now() });
+    expect(t.tracker.state().paused).toBe(false);
+  });
+
+  test('resume() ends a pause early', () => {
+    t.focus('a');
+    t.tracker.pause(30);
+    t.advance(1_000);
+    t.tracker.resume();
+    expect(t.rows()).toHaveLength(2);
+    expect(t.tracker.state()).toMatchObject({ paused: false, currentAppId: 'a' });
+  });
+});
+
+describe('events and state', () => {
+  test('emits focus, idle, active and pause events', () => {
+    const events: string[] = [];
+    t.tracker.onEvent((e) => events.push(e.type));
+
+    t.focus('a');
+    t.focus('a'); // same app: no second event
+    t.advance(THRESHOLD);
+    t.idle(true);
+    t.idle(false);
+    t.tracker.pause(5);
+    t.tracker.resume();
+
+    expect(events).toEqual(['focus', 'idle', 'active', 'paused', 'resumed']);
+  });
+
+  test('idle event carries the time idleness began', () => {
+    let at = 0;
+    t.tracker.onEvent((e) => {
+      if (e.type === 'idle') at = e.at;
+    });
+    t.focus('a');
+    t.advance(THRESHOLD);
+    t.idle(true);
+    expect(at).toBe(t.now() - THRESHOLD);
+  });
+
+  test('state() reports the counted app only while tracking', () => {
+    expect(t.tracker.state().currentAppId).toBeNull();
+    t.focus('a');
+    expect(t.tracker.state()).toMatchObject({ currentAppId: 'a', since: t.now(), idle: false });
+    t.advance(THRESHOLD);
+    t.idle(true);
+    expect(t.tracker.state()).toMatchObject({ currentAppId: null, idle: true });
+  });
+});
+
+describe('configure', () => {
+  test('toggling captureTitles takes effect for later sessions', () => {
+    t.focus('a', 'private');
+    t.tracker.configure({ captureTitles: true });
+    t.advance(20_000);
+    t.focus('b', 'shared');
+    expect(t.rows().map((r) => r.title)).toEqual([null, 'shared']);
   });
 });

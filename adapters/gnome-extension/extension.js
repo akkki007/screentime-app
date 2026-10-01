@@ -77,7 +77,10 @@ export default class ScreentimeFocusExtension extends Extension {
     if (!win) return null;
 
     const app = this._tracker.get_window_app(win);
-    const appId = app?.get_id() ?? win.get_wm_class() ?? 'unknown';
+    // Windows without a .desktop file get a synthetic "window:<n>" ID that is
+    // different every time; identify those by WM_CLASS instead.
+    let appId = app?.get_id() ?? '';
+    if (!appId || appId.startsWith('window:')) appId = win.get_wm_class() ?? 'unknown';
     const title = win.get_title() ?? '';
     const pid = win.get_pid?.() ?? 0;
     return [appId, title, pid];

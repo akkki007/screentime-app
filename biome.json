@@ -7,7 +7,17 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": ["dist", "build", "node_modules", "*.min.js"]
+    "ignore": [
+      "**/.cottontail-tmp",
+      "**/.hutch",
+      "**/artifacts",
+      "**/build",
+      "**/dist",
+      "*.min.js",
+      "build",
+      "dist",
+      "node_modules"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -27,5 +37,17 @@
       "semicolons": "always",
       "trailingCommas": "all"
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/*.svelte"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConst": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* Design tokens. Components use these, never raw colours, so light/dark stay in sync. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --line: #e3e6eb;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #3b7bff;
+  --accent-soft: #e6eeff;
+  --good: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1014;
+  --surface: #161a21;
+  --surface-2: #1d222b;
+  --line: #262c37;
+  --text: #e7e9ee;
+  --muted: #8d96a5;
+  --accent: #5b94ff;
+  --accent-soft: #1b2740;
+  --good: #3ccf78;
+  --warn: #f0a23b;
+  --bad: #f2655f;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1014;
+    --surface: #161a21;
+    --surface-2: #1d222b;
+    --line: #262c37;
+    --text: #e7e9ee;
+    --muted: #8d96a5;
+    --accent: #5b94ff;
+    --accent-soft: #1b2740;
+    --good: #3ccf78;
+    --warn: #f0a23b;
+    --bad: #f2655f;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: "Inter", "Cantarell", "Ubuntu", system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* In the base layer so Tailwind utilities (text-white, ...) can override them. */
+@layer base {
+  button,
+  select,
+  input {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+}
+
+/* uPlot: let tooltips and axes inherit the theme. */
+.uplot,
+.uplot * {
+  font-family: var(--font-sans);
+}
+.u-legend {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

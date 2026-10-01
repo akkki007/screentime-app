@@ -1,0 +1,150 @@
+/**
+ * Built-in categories and the app IDs that map to them by default.
+ * Mirrors the rows seeded by migration 0003; `productive` is 1 for
+ * productive, 0 for distracting and null for neutral.
+ */
+export type DefaultCategory = {
+  name: string;
+  color: string;
+  productive: 0 | 1 | null;
+  /** Lowercase substrings matched against an app's ID. */
+  match: string[];
+};
+
+export const DEFAULT_CATEGORIES: DefaultCategory[] = [
+  {
+    name: 'Development',
+    color: '#4f8cff',
+    productive: 1,
+    match: [
+      'code',
+      'vscodium',
+      'cursor',
+      'jetbrains',
+      'intellij',
+      'pycharm',
+      'webstorm',
+      'neovim',
+      'emacs',
+      'sublime',
+      'ptyxis',
+      'gnome-terminal',
+      'console',
+      'konsole',
+      'alacritty',
+      'kitty',
+      'wezterm',
+      'foot',
+      'terminal',
+      'xterm',
+      'gitg',
+      'meld',
+      'postman',
+      'dbeaver',
+    ],
+  },
+  {
+    name: 'Productivity',
+    color: '#34c38f',
+    productive: 1,
+    match: [
+      'libreoffice',
+      'onlyoffice',
+      'evince',
+      'okular',
+      'obsidian',
+      'logseq',
+      'notion',
+      'gedit',
+      'texteditor',
+      'calendar',
+      'todo',
+      'thunderbird',
+      'evolution',
+      'zotero',
+    ],
+  },
+  {
+    name: 'Communication',
+    color: '#a78bfa',
+    productive: null,
+    match: [
+      'slack',
+      'discord',
+      'telegram',
+      'signal',
+      'element',
+      'teams',
+      'zoom',
+      'whatsapp',
+      'skype',
+    ],
+  },
+  {
+    name: 'Social',
+    color: '#f472b6',
+    productive: 0,
+    match: ['twitter', 'facebook', 'instagram', 'reddit', 'tiktok', 'mastodon', 'tuba'],
+  },
+  {
+    name: 'Entertainment',
+    color: '#fb923c',
+    productive: 0,
+    match: [
+      'spotify',
+      'vlc',
+      'totem',
+      'celluloid',
+      'mpv',
+      'steam',
+      'lutris',
+      'heroic',
+      'netflix',
+      'youtube',
+      'rhythmbox',
+      'clapper',
+    ],
+  },
+  {
+    name: 'Browsing',
+    color: '#facc15',
+    productive: null,
+    match: [
+      'firefox',
+      'chrome',
+      'chromium',
+      'brave',
+      'vivaldi',
+      'epiphany',
+      'opera',
+      'librewolf',
+      'zen',
+    ],
+  },
+  {
+    name: 'Utilities',
+    color: '#94a3b8',
+    productive: null,
+    match: [
+      'nautilus',
+      'files',
+      'dolphin',
+      'thunar',
+      'settings',
+      'control-center',
+      'software',
+      'disks',
+      'calculator',
+      'screenshot',
+      'gnome-system-monitor',
+      'extensions',
+    ],
+  },
+  { name: 'Other', color: '#64748b', productive: null, match: [] },
+];
+
+/** The default category name for an app ID, or undefined when nothing matches. */
+export function defaultCategoryFor(appId: string): string | undefined {
+  const id = appId.toLowerCase();
+  return DEFAULT_CATEGORIES.find((c) => c.match.some((m) => id.includes(m)))?.name;
+}

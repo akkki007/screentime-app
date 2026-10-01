@@ -1,7 +1,8 @@
 import type { Database } from 'bun:sqlite';
 import type { FocusProvider, FocusedWindow } from '@screentime/shared';
+import { ensureApp } from './apps';
 
-const HEARTBEAT_MS = 5_000;
+export const HEARTBEAT_MS = 5_000;
 const MERGE_GAP_MS = 10_000;
 const DEFAULT_IDLE_THRESHOLD_MS = 3 * 60 * 1_000;
 
@@ -13,6 +14,22 @@ export type TrackerOptions = {
   now?: () => number;
   /** Debug sink; never receives titles unless `captureTitles` is on. */
   log?: (message: string) => void;
+};
+
+export type TrackerEvent =
+  | { type: 'focus'; appId: string; since: number }
+  | { type: 'idle'; at: number }
+  | { type: 'active'; at: number }
+  | { type: 'paused'; until: number }
+  | { type: 'resumed' };
+
+export type TrackerState = {
+  paused: boolean;
+  resumeAt: number | null;
+  idle: boolean;
+  /** The app currently being counted, or null while idle, paused or unfocused. */
+  currentAppId: string | null;
+  since: number | null;
 };
 
 type OpenSession = {
@@ -32,15 +49,17 @@ type OpenSession = {
  */
 export class Tracker {
   private open: OpenSession | undefined;
-  /** Latest focused window, kept so tracking can resume after idle or suspend. */
+  /** Latest focused window, kept so tracking can resume after idle, pause or suspend. */
   private current: FocusedWindow | undefined;
   private idle = false;
+  private pausedUntil: number | null = null;
   private heartbeat: ReturnType<typeof setInterval> | undefined;
   private unsubscribeFocus: (() => void) | undefined;
   private unsubscribeIdle: (() => void) | undefined;
+  private readonly listeners = new Set<(event: TrackerEvent) => void>();
 
-  private readonly idleThresholdMs: number;
-  private readonly captureTitles: boolean;
+  private idleThresholdMs: number;
+  private captureTitles: boolean;
   private readonly now: () => number;
   private readonly log: (message: string) => void;
 
@@ -57,10 +76,7 @@ export class Tracker {
 
   start(): void {
     this.unsubscribeFocus = this.focusProvider.onFocusChange((w) => this.handleFocusChange(w));
-    this.unsubscribeIdle = this.focusProvider.onIdleChange(
-      (idle) => this.handleIdleChange(idle),
-      this.idleThresholdMs,
-    );
+    this.subscribeIdle();
     this.heartbeat = setInterval(() => this.handleHeartbeat(), HEARTBEAT_MS);
   }
 
@@ -71,22 +87,98 @@ export class Tracker {
     this.closeOpenSession();
   }
 
+  /** Subscribe to state changes. Returns an unsubscribe function. */
+  onEvent(listener: (event: TrackerEvent) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  state(): TrackerState {
+    return {
+      paused: this.pausedUntil !== null,
+      resumeAt: this.pausedUntil,
+      idle: this.idle,
+      currentAppId: this.open?.appId ?? null,
+      since: this.open?.startTs ?? null,
+    };
+  }
+
+  /** Applies changed settings without dropping the focus subscription. */
+  configure(options: { captureTitles?: boolean; idleThresholdMs?: number }): void {
+    if (options.captureTitles !== undefined) this.captureTitles = options.captureTitles;
+
+    const threshold = options.idleThresholdMs;
+    if (threshold !== undefined && threshold !== this.idleThresholdMs) {
+      this.idleThresholdMs = threshold;
+      // Changing a setting needs the user at the keyboard, so they are not idle.
+      this.handleIdleChange(false);
+      this.unsubscribeIdle?.();
+      this.subscribeIdle();
+    }
+  }
+
+  /** Stops counting time until `minutes` from now. Returns when it will resume. */
+  pause(minutes: number): number {
+    const until = this.now() + minutes * 60_000;
+    this.pausedUntil = until;
+    this.closeOpenSession();
+    this.log(`paused until ${new Date(until).toISOString()}`);
+    this.emit({ type: 'paused', until });
+    return until;
+  }
+
+  resume(): void {
+    if (this.pausedUntil === null) return;
+    this.pausedUntil = null;
+    this.log('resumed');
+    if (!this.idle && this.current) this.openSession({ ...this.current, ts: this.now() });
+    this.emit({ type: 'resumed' });
+  }
+
+  /**
+   * Drops the open session without writing it and starts a fresh one from the
+   * last known focus. Used after the database rows underneath it were wiped.
+   */
+  restartSession(): void {
+    this.open = undefined;
+    if (!this.idle && this.pausedUntil === null && this.current) {
+      this.openSession({ ...this.current, ts: this.now() });
+    }
+  }
+
+  private subscribeIdle(): void {
+    this.unsubscribeIdle = this.focusProvider.onIdleChange(
+      (idle) => this.handleIdleChange(idle),
+      this.idleThresholdMs,
+    );
+  }
+
+  private emit(event: TrackerEvent): void {
+    for (const listener of this.listeners) listener(event);
+  }
+
   private handleFocusChange(raw: FocusedWindow): void {
     const w: FocusedWindow = {
       ...raw,
       appId: normalizeAppId(raw.appId),
       title: this.captureTitles ? raw.title : undefined,
     };
+    const appChanged = this.current?.appId !== w.appId;
     this.current = w;
     this.log(`focus -> ${w.appId}${w.title ? ` "${w.title}"` : ''}${this.idle ? ' (idle)' : ''}`);
+    if (appChanged) this.emit({ type: 'focus', appId: w.appId, since: w.ts });
 
-    if (this.idle) return;
+    if (this.idle || this.pausedUntil !== null) return;
 
     if (this.open && this.open.appId === w.appId && w.ts - this.open.lastSeenTs < MERGE_GAP_MS) {
       this.touchOpenSession(w.ts);
       return;
     }
 
+    // The user was in the old app right up to this switch, so end it here
+    // rather than at the last heartbeat (up to 5 s earlier) — unless the gap
+    // is so long that the machine must have been suspended.
+    if (this.open && w.ts - this.open.lastSeenTs < MERGE_GAP_MS) this.touchOpenSession(w.ts);
     this.closeOpenSession();
     this.openSession(w);
   }
@@ -96,22 +188,33 @@ export class Tracker {
     this.idle = idle;
     this.log(idle ? 'idle' : 'active');
 
+    const now = this.now();
     if (idle) {
       // The idle watch fires after `idleThresholdMs` of no input, but the
       // heartbeat kept extending the session through that stretch. Idle
       // actually began a threshold ago, so don't count that time.
-      this.closeOpenSession(this.now() - this.idleThresholdMs);
-    } else if (this.current) {
+      const since = now - this.idleThresholdMs;
+      this.closeOpenSession(since);
+      this.emit({ type: 'idle', at: since });
+    } else {
       // Returning to the same window sends no focus event, so resume from the
       // last known one.
-      this.openSession({ ...this.current, ts: this.now() });
+      if (this.current && this.pausedUntil === null) {
+        this.openSession({ ...this.current, ts: now });
+      }
+      this.emit({ type: 'active', at: now });
     }
   }
 
   private handleHeartbeat(): void {
+    const now = this.now();
+
+    // Checked here rather than with a timer so an expiry that passes during
+    // suspend is still honoured on wake.
+    if (this.pausedUntil !== null && now >= this.pausedUntil) this.resume();
+
     if (!this.open || this.idle) return;
 
-    const now = this.now();
     if (now - this.open.lastSeenTs > MERGE_GAP_MS) {
       // Heartbeats stopped for far longer than their interval: the machine was
       // suspended (or the daemon stalled). Don't stretch the session across the
@@ -125,7 +228,7 @@ export class Tracker {
   }
 
   private openSession(w: FocusedWindow): void {
-    const appRowId = this.upsertApp(w.appId);
+    const appRowId = ensureApp(this.db, w.appId);
     const result = this.db
       .query(
         `INSERT INTO sessions (app_id, title, start_ts, end_ts, source) VALUES (?, ?, ?, ?, 'desktop')`,
@@ -155,17 +258,15 @@ export class Tracker {
     this.db.query('UPDATE sessions SET end_ts = ? WHERE id = ?').run(end, this.open.rowId);
     this.open = undefined;
   }
-
-  private upsertApp(appId: string): number {
-    this.db.query('INSERT OR IGNORE INTO apps (app_id) VALUES (?)').run(appId);
-    const row = this.db.query('SELECT id FROM apps WHERE app_id = ?').get(appId) as {
-      id: number;
-    };
-    return row.id;
-  }
 }
 
-/** GNOME reports `org.mozilla.firefox.desktop`; the docs identify apps without the suffix. */
+/**
+ * GNOME reports `org.mozilla.firefox.desktop`; the docs identify apps without
+ * the suffix. Synthetic per-window IDs (`window:28`, which GNOME makes up for
+ * windows with no .desktop file) would create a new "app" every time, so they
+ * are folded into one `unknown` bucket.
+ */
 export function normalizeAppId(appId: string): string {
+  if (/^window:\d+$/.test(appId)) return 'unknown';
   return appId.endsWith('.desktop') ? appId.slice(0, -'.desktop'.length) : appId;
 }

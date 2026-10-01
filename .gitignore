@@ -34,3 +34,6 @@ packaging/appimage/*.AppImage
 
 # Test / coverage
 coverage/
+.cottontail-tmp/
+.hutch/
+artifacts/

@@ -1,6 +1,11 @@
 import { APP_ID } from '@screentime/shared';
 import type { FocusProvider, FocusedWindow, Unsubscribe } from '@screentime/shared';
-import { sessionBus } from 'dbus-next';
+import { type ClientInterface, sessionBus } from 'dbus-next';
+
+const RETRY_MS = 3_000;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type FocusHandler = (appId: string, title: string, pid: number) => void;
 
 const FOCUS_INTERFACE = `${APP_ID}.Focus`;
 const FOCUS_OBJECT_PATH = `/${APP_ID.replaceAll('.', '/')}/Focus`;
@@ -37,27 +42,68 @@ export class GnomeWaylandFocusProvider implements FocusProvider {
   onFocusChange(cb: (w: FocusedWindow) => void): Unsubscribe {
     const bus = sessionBus();
     let disposed = false;
+    /** Bumped on every attempt so a slow, superseded attempt can't clobber a newer one. */
+    let generation = 0;
+    let current: { iface: ClientInterface; handler: FocusHandler } | undefined;
+
+    const handler: FocusHandler = (appId, title, pid) => {
+      if (disposed) return;
+      cb({ appId, title: title || undefined, pid: pid || undefined, ts: Date.now() });
+    };
+
+    /** Returns false when the extension isn't there (yet). */
+    const subscribe = async (): Promise<boolean> => {
+      const mine = ++generation;
+      try {
+        const obj = await bus.getProxyObject(APP_ID, FOCUS_OBJECT_PATH);
+        if (disposed || mine !== generation) return true;
+
+        const iface = obj.getInterface(FOCUS_INTERFACE);
+        if (current) current.iface.off('FocusChanged', current.handler);
+        iface.on('FocusChanged', handler);
+        current = { iface, handler };
+        console.log('[gnome-wayland] connected to the Screentime Shell extension');
+
+        // The extension only emits on change, so ask for the window that is
+        // focused right now; otherwise nothing is tracked until the next switch.
+        // Older extension builds lack GetFocus, so tolerate its absence.
+        try {
+          const [appId, title, pid] = (await iface.GetFocus?.()) as [string, string, number];
+          if (appId) handler(appId, title, pid);
+        } catch {
+          // extension predates GetFocus
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    };
 
     (async () => {
-      const obj = await bus.getProxyObject(APP_ID, FOCUS_OBJECT_PATH);
-      const iface = obj.getInterface(FOCUS_INTERFACE);
-      const handler = (appId: string, title: string, pid: number) => {
-        if (disposed) return;
-        cb({ appId, title: title || undefined, pid: pid || undefined, ts: Date.now() });
-      };
-      iface.on('FocusChanged', handler);
+      // GNOME disables extensions while the screen is locked and loads them in
+      // parallel with login, so the extension can legitimately be absent when
+      // the daemon starts. Follow the bus name as it comes and goes rather than
+      // trying once and giving up (which would leave tracking dead until the
+      // daemon was restarted).
+      const dbusIface = (
+        await bus.getProxyObject('org.freedesktop.DBus', '/org/freedesktop/DBus')
+      ).getInterface('org.freedesktop.DBus');
+      dbusIface.on('NameOwnerChanged', (name: string, _old: string, owner: string) => {
+        if (name === APP_ID && owner && !disposed) void subscribe();
+      });
 
-      // The extension only emits on change, so ask for the window that is
-      // focused right now; otherwise nothing is tracked until the next switch.
-      // Older extension builds lack GetFocus, so tolerate its absence.
-      try {
-        const [appId, title, pid] = (await iface.GetFocus?.()) as [string, string, number];
-        if (appId) handler(appId, title, pid);
-      } catch {
-        // extension predates GetFocus
+      let warned = false;
+      while (!disposed && !(await subscribe())) {
+        if (!warned) {
+          warned = true;
+          console.warn(
+            '[gnome-wayland] waiting for the Screentime Shell extension (is it enabled? GNOME also deactivates it while the screen is locked)',
+          );
+        }
+        await sleep(RETRY_MS);
       }
     })().catch((err) => {
-      console.error('[gnome-wayland] failed to subscribe to FocusChanged:', err);
+      console.error('[gnome-wayland] focus subscription failed:', err);
     });
 
     return () => {
@@ -71,7 +117,16 @@ export class GnomeWaylandFocusProvider implements FocusProvider {
     let disposed = false;
 
     (async () => {
-      const obj = await bus.getProxyObject(MUTTER_IDLE_SERVICE, MUTTER_IDLE_PATH);
+      // Mutter may not be on the bus yet if the daemon starts early in login.
+      let obj: Awaited<ReturnType<typeof bus.getProxyObject>> | undefined;
+      while (!disposed && !obj) {
+        try {
+          obj = await bus.getProxyObject(MUTTER_IDLE_SERVICE, MUTTER_IDLE_PATH);
+        } catch {
+          await sleep(RETRY_MS);
+        }
+      }
+      if (!obj || disposed) return;
       const iface = obj.getInterface(MUTTER_IDLE_INTERFACE);
 
       // dbus-next types interface methods via an index signature ([name: string]:

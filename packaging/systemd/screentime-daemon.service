@@ -1,6 +1,7 @@
 [Unit]
 Description=Screentime tracker daemon
 Documentation=https://github.com/akkki007/screentime-app
+# Needs the graphical session: the adapters read the focused window from it.
 After=graphical-session.target
 PartOf=graphical-session.target
 
@@ -9,12 +10,21 @@ Type=simple
 ExecStart=/usr/lib/screentime/daemon
 Restart=on-failure
 RestartSec=2
-# No network access needed or wanted: the daemon is local-only by design.
-# (Enforced here defensively as well as in code.)
+
+# $XDG_RUNTIME_DIR/screentime, where the UI and browser host find the socket.
+RuntimeDirectory=screentime
+RuntimeDirectoryMode=0700
+
+# The daemon is local-only by design: it only ever needs Unix sockets (the
+# D-Bus session bus and its own RPC socket), so refuse every other kind
+# (enforced here as well as in code).
 RestrictAddressFamilies=AF_UNIX
-ProtectSystem=strict
-ReadWritePaths=%h/.local/share/screentime %t/screentime
 NoNewPrivileges=true
+LockPersonality=true
+# Deliberately NOT using ProtectSystem=/PrivateTmp=/ReadWritePaths=: they need
+# unprivileged user namespaces, which Ubuntu 24.04+ restricts, and a user unit
+# using them fails to start with "Failed to set up mount namespacing".
+# MemoryDenyWriteExecute is also off because Bun's JIT needs writable+executable pages.
 
 [Install]
 WantedBy=graphical-session.target
