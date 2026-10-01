@@ -16,6 +16,7 @@ type Name =
   | 'edit'
   | 'alert'
   | 'check'
+  | 'globe'
   | 'x';
 
 const { name, size = 18 }: { name: Name; size?: number } = $props();
@@ -39,6 +40,8 @@ const paths: Record<Name, string> = {
   edit: '<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
   alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17.5v.01"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  globe:
+    '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
 };
 </script>

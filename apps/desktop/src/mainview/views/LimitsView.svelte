@@ -200,7 +200,7 @@ async function remove() {
 							<AppAvatar appId={limit.target} size={36} />
 						{:else}
 							<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
-								<Icon name={limit.targetType === "category" ? "apps" : "week"} size={16} />
+								<Icon name={limit.targetType === "category" ? "apps" : "globe"} size={16} />
 							</span>
 						{/if}
 						<div class="min-w-0 flex-1">
