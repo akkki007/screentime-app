@@ -46,6 +46,16 @@ export class GnomeWaylandFocusProvider implements FocusProvider {
         cb({ appId, title: title || undefined, pid: pid || undefined, ts: Date.now() });
       };
       iface.on('FocusChanged', handler);
+
+      // The extension only emits on change, so ask for the window that is
+      // focused right now; otherwise nothing is tracked until the next switch.
+      // Older extension builds lack GetFocus, so tolerate its absence.
+      try {
+        const [appId, title, pid] = (await iface.GetFocus?.()) as [string, string, number];
+        if (appId) handler(appId, title, pid);
+      } catch {
+        // extension predates GetFocus
+      }
     })().catch((err) => {
       console.error('[gnome-wayland] failed to subscribe to FocusChanged:', err);
     });
@@ -75,27 +85,35 @@ export class GnomeWaylandFocusProvider implements FocusProvider {
         return method.apply(iface, args) as Promise<T>;
       };
 
-      const armIdleWatch = async () => {
-        const watchId = await callMethod<number>('AddIdleWatch', thresholdMs);
-        const onWatchFired = (id: number) => {
-          if (disposed || id !== watchId) return;
-          cb(true);
-        };
-        iface.on('WatchFired', onWatchFired);
-      };
+      // AddIdleWatch repeats every time the threshold is crossed, but
+      // AddUserActiveWatch fires once and is then removed, so it has to be
+      // re-armed after each idle period.
+      const idleWatchId = await callMethod<number>('AddIdleWatch', thresholdMs);
+      let activeWatchId: number | undefined;
 
       const armActiveWatch = async () => {
-        const watchId = await callMethod<number>('AddUserActiveWatch');
-        const onWatchFired = (id: number) => {
-          if (disposed || id !== watchId) return;
-          cb(false);
-          armIdleWatch().catch(() => {});
-        };
-        iface.on('WatchFired', onWatchFired);
+        activeWatchId = await callMethod<number>('AddUserActiveWatch');
+        // Activity may have resumed while the call was in flight, in which
+        // case the watch will never fire for it.
+        const idleMs = await callMethod<bigint | number>('GetIdletime');
+        if (Number(idleMs) < thresholdMs) {
+          activeWatchId = undefined;
+          if (!disposed) cb(false);
+        }
       };
 
-      await armIdleWatch();
-      await armActiveWatch();
+      iface.on('WatchFired', (id: number) => {
+        if (disposed) return;
+        if (id === idleWatchId) {
+          cb(true);
+          armActiveWatch().catch((err) => {
+            console.error('[gnome-wayland] failed to arm user-active watch:', err);
+          });
+        } else if (id === activeWatchId) {
+          activeWatchId = undefined;
+          cb(false);
+        }
+      });
     })().catch((err) => {
       console.error('[gnome-wayland] failed to subscribe to IdleMonitor:', err);
     });

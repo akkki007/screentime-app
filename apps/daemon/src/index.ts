@@ -11,7 +11,10 @@ async function main() {
   const focusProvider = await selectFocusProvider();
   console.log(`[daemon] using focus provider: ${focusProvider.id}`);
 
-  const tracker = new Tracker(db, focusProvider);
+  const debug = process.env.SCREENTIME_DEBUG === '1';
+  const tracker = new Tracker(db, focusProvider, {
+    log: debug ? (message) => console.log(`[tracker] ${message}`) : undefined,
+  });
   tracker.start();
 
   const handlers: MethodHandlers = {
