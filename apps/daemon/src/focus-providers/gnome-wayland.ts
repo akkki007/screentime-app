@@ -1,181 +1,142 @@
 import { APP_ID } from '@screentime/shared';
 import type { FocusProvider, FocusedWindow, Unsubscribe } from '@screentime/shared';
-import { type ClientInterface, sessionBus } from 'dbus-next';
-
-const RETRY_MS = 3_000;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-type FocusHandler = (appId: string, title: string, pid: number) => void;
+import { parseTuple } from '../gvariant';
+import { type Runner, bunRunner } from '../runner';
 
 const FOCUS_INTERFACE = `${APP_ID}.Focus`;
 const FOCUS_OBJECT_PATH = `/${APP_ID.replaceAll('.', '/')}/Focus`;
+const IDLE_SERVICE = 'org.gnome.Mutter.IdleMonitor';
+const IDLE_PATH = '/org/gnome/Mutter/IdleMonitor/Core';
+const IDLE_POLL_MS = 3_000;
+const RESTART_MS = 3_000;
 
-const MUTTER_IDLE_SERVICE = 'org.gnome.Mutter.IdleMonitor';
-const MUTTER_IDLE_PATH = '/org/gnome/Mutter/IdleMonitor/Core';
-const MUTTER_IDLE_INTERFACE = 'org.gnome.Mutter.IdleMonitor';
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Focus source: our own GNOME Shell extension (adapters/gnome-extension),
- * which emits `${APP_ID}.Focus.FocusChanged(s appId, s title, u pid)` on the
- * session bus whenever the focused window changes.
+ * Focus source: our GNOME Shell extension (adapters/gnome-extension), which
+ * emits `FocusChanged(s appId, s title, u pid)` and answers `GetFocus()`.
+ * Idle source: Mutter's IdleMonitor `GetIdletime`.
  *
- * Idle source: org.gnome.Mutter.IdleMonitor, via a watch that fires once the
- * user has been idle for `thresholdMs`, re-armed on activity.
+ * D-Bus is reached through the `gdbus` tool rather than a JavaScript library:
+ * `dbus-next` alone cost ~25 MB of resident memory in an always-on service,
+ * which is a large part of the daemon's 60 MB budget (see ADR 6).
  */
 export class GnomeWaylandFocusProvider implements FocusProvider {
   readonly id = 'gnome-wayland';
 
-  async isAvailable(): Promise<boolean> {
-    if (process.env.XDG_SESSION_TYPE !== 'wayland') return false;
-    if (!process.env.XDG_CURRENT_DESKTOP?.toLowerCase().includes('gnome')) return false;
+  constructor(
+    private readonly runner: Runner = bunRunner,
+    private readonly env: NodeJS.ProcessEnv = process.env,
+    private readonly now: () => number = Date.now,
+  ) {}
 
-    try {
-      const bus = sessionBus();
-      await bus.getProxyObject('org.freedesktop.DBus', '/org/freedesktop/DBus');
-      bus.disconnect();
-      return true;
-    } catch {
-      return false;
-    }
+  async isAvailable(): Promise<boolean> {
+    if (this.env.XDG_SESSION_TYPE !== 'wayland') return false;
+    if (!this.env.XDG_CURRENT_DESKTOP?.toLowerCase().includes('gnome')) return false;
+    return this.runner.has('gdbus');
   }
 
   onFocusChange(cb: (w: FocusedWindow) => void): Unsubscribe {
-    const bus = sessionBus();
     let disposed = false;
-    /** Bumped on every attempt so a slow, superseded attempt can't clobber a newer one. */
-    let generation = 0;
-    let current: { iface: ClientInterface; handler: FocusHandler } | undefined;
+    let stopMonitor: (() => void) | undefined;
 
-    const handler: FocusHandler = (appId, title, pid) => {
-      if (disposed) return;
-      cb({ appId, title: title || undefined, pid: pid || undefined, ts: Date.now() });
-    };
-
-    /** Returns false when the extension isn't there (yet). */
-    const subscribe = async (): Promise<boolean> => {
-      const mine = ++generation;
-      try {
-        const obj = await bus.getProxyObject(APP_ID, FOCUS_OBJECT_PATH);
-        if (disposed || mine !== generation) return true;
-
-        const iface = obj.getInterface(FOCUS_INTERFACE);
-        if (current) current.iface.off('FocusChanged', current.handler);
-        iface.on('FocusChanged', handler);
-        current = { iface, handler };
-        console.log('[gnome-wayland] connected to the Screentime Shell extension');
-
-        // The extension only emits on change, so ask for the window that is
-        // focused right now; otherwise nothing is tracked until the next switch.
-        // Older extension builds lack GetFocus, so tolerate its absence.
-        try {
-          const [appId, title, pid] = (await iface.GetFocus?.()) as [string, string, number];
-          if (appId) handler(appId, title, pid);
-        } catch {
-          // extension predates GetFocus
-        }
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    (async () => {
-      // GNOME disables extensions while the screen is locked and loads them in
-      // parallel with login, so the extension can legitimately be absent when
-      // the daemon starts. Follow the bus name as it comes and goes rather than
-      // trying once and giving up (which would leave tracking dead until the
-      // daemon was restarted).
-      const dbusIface = (
-        await bus.getProxyObject('org.freedesktop.DBus', '/org/freedesktop/DBus')
-      ).getInterface('org.freedesktop.DBus');
-      dbusIface.on('NameOwnerChanged', (name: string, _old: string, owner: string) => {
-        if (name === APP_ID && owner && !disposed) void subscribe();
+    const emit = (values: ReturnType<typeof parseTuple>) => {
+      const [appId, title, pid] = values ?? [];
+      if (disposed || typeof appId !== 'string' || !appId) return;
+      cb({
+        appId,
+        title: typeof title === 'string' && title ? title : undefined,
+        pid: typeof pid === 'number' && pid ? pid : undefined,
+        ts: this.now(),
       });
+    };
 
-      let warned = false;
-      while (!disposed && !(await subscribe())) {
-        if (!warned) {
-          warned = true;
-          console.warn(
-            '[gnome-wayland] waiting for the Screentime Shell extension (is it enabled? GNOME also deactivates it while the screen is locked)',
-          );
-        }
-        await sleep(RETRY_MS);
+    // The extension only emits on change, so ask for the window focused right
+    // now. Older extension builds lack GetFocus; that just fails and is ignored.
+    const fetchCurrent = async () => {
+      const { stdout, ok } = await this.runner.run([
+        'gdbus',
+        'call',
+        '--session',
+        '--dest',
+        APP_ID,
+        '--object-path',
+        FOCUS_OBJECT_PATH,
+        '--method',
+        `${FOCUS_INTERFACE}.GetFocus`,
+      ]);
+      if (ok) emit(parseTuple(stdout));
+    };
+
+    const onLine = (line: string) => {
+      if (line.includes(`${FOCUS_INTERFACE}.FocusChanged`)) {
+        emit(parseTuple(line.slice(line.indexOf('('))));
+      } else if (line.includes(`The name ${APP_ID} is owned by`)) {
+        // The extension (re)appeared: it loads in parallel with login and GNOME
+        // deactivates it on the lock screen, so this is how we catch up.
+        void fetchCurrent();
+      } else if (line.includes('does not have an owner')) {
+        console.warn(
+          '[gnome-wayland] waiting for the Screentime Shell extension (is it enabled? GNOME also deactivates it while the screen is locked)',
+        );
       }
-    })().catch((err) => {
-      console.error('[gnome-wayland] focus subscription failed:', err);
-    });
+    };
+
+    // gdbus keeps running across owner changes; this loop only covers the tool itself exiting.
+    (async () => {
+      while (!disposed) {
+        const monitor = this.runner.stream(
+          ['gdbus', 'monitor', '--session', '--dest', APP_ID, '--object-path', FOCUS_OBJECT_PATH],
+          onLine,
+        );
+        stopMonitor = monitor.stop;
+        await monitor.exited;
+        if (!disposed) await sleep(RESTART_MS);
+      }
+    })();
 
     return () => {
       disposed = true;
-      bus.disconnect();
+      stopMonitor?.();
     };
   }
 
   onIdleChange(cb: (idle: boolean) => void, thresholdMs: number): Unsubscribe {
-    const bus = sessionBus();
+    let idle = false;
     let disposed = false;
+    let busy = false;
 
-    (async () => {
-      // Mutter may not be on the bus yet if the daemon starts early in login.
-      let obj: Awaited<ReturnType<typeof bus.getProxyObject>> | undefined;
-      while (!disposed && !obj) {
-        try {
-          obj = await bus.getProxyObject(MUTTER_IDLE_SERVICE, MUTTER_IDLE_PATH);
-        } catch {
-          await sleep(RETRY_MS);
+    const poll = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const { stdout, ok } = await this.runner.run([
+          'gdbus',
+          'call',
+          '--session',
+          '--dest',
+          IDLE_SERVICE,
+          '--object-path',
+          IDLE_PATH,
+          '--method',
+          `${IDLE_SERVICE}.GetIdletime`,
+        ]);
+        const idleMs = parseTuple(stdout)?.[0];
+        if (disposed || !ok || typeof idleMs !== 'number') return;
+        const nowIdle = idleMs >= thresholdMs;
+        if (nowIdle !== idle) {
+          idle = nowIdle;
+          cb(idle);
         }
+      } finally {
+        busy = false;
       }
-      if (!obj || disposed) return;
-      const iface = obj.getInterface(MUTTER_IDLE_INTERFACE);
+    };
 
-      // dbus-next types interface methods via an index signature ([name: string]:
-      // Function), so noUncheckedIndexedAccess flags direct calls as possibly
-      // undefined even though these methods are always present on this
-      // well-known interface. Route calls through this small helper instead of
-      // sprinkling non-null assertions.
-      const callMethod = <T>(name: string, ...args: unknown[]): Promise<T> => {
-        const method = iface[name];
-        if (!method) throw new Error(`${MUTTER_IDLE_INTERFACE} has no method ${name}`);
-        return method.apply(iface, args) as Promise<T>;
-      };
-
-      // AddIdleWatch repeats every time the threshold is crossed, but
-      // AddUserActiveWatch fires once and is then removed, so it has to be
-      // re-armed after each idle period.
-      const idleWatchId = await callMethod<number>('AddIdleWatch', thresholdMs);
-      let activeWatchId: number | undefined;
-
-      const armActiveWatch = async () => {
-        activeWatchId = await callMethod<number>('AddUserActiveWatch');
-        // Activity may have resumed while the call was in flight, in which
-        // case the watch will never fire for it.
-        const idleMs = await callMethod<bigint | number>('GetIdletime');
-        if (Number(idleMs) < thresholdMs) {
-          activeWatchId = undefined;
-          if (!disposed) cb(false);
-        }
-      };
-
-      iface.on('WatchFired', (id: number) => {
-        if (disposed) return;
-        if (id === idleWatchId) {
-          cb(true);
-          armActiveWatch().catch((err) => {
-            console.error('[gnome-wayland] failed to arm user-active watch:', err);
-          });
-        } else if (id === activeWatchId) {
-          activeWatchId = undefined;
-          cb(false);
-        }
-      });
-    })().catch((err) => {
-      console.error('[gnome-wayland] failed to subscribe to IdleMonitor:', err);
-    });
-
+    const timer = setInterval(() => void poll(), IDLE_POLL_MS);
     return () => {
       disposed = true;
-      bus.disconnect();
+      clearInterval(timer);
     };
   }
 }

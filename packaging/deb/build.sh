@@ -21,8 +21,7 @@ trap 'rm -rf "$STAGE"' EXIT
 
 echo "==> daemon"
 install -d "$STAGE/usr/lib/screentime"
-# dbus-next lazily requires an optional `x11` package that we don't use.
-bun build apps/daemon/src/index.ts --compile --external x11 --outfile "$STAGE/usr/lib/screentime/daemon"
+bun build apps/daemon/src/index.ts --compile --outfile "$STAGE/usr/lib/screentime/daemon"
 
 echo "==> browser native-messaging host"
 bun build extensions/browser/native-host/host.ts --compile --outfile "$STAGE/usr/lib/screentime/native-host"

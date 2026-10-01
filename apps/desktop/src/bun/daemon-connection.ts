@@ -1,6 +1,5 @@
+import type { ConnectionState } from '../shared/bridge';
 import { DaemonClient } from './ipc-client';
-
-export type ConnectionState = { connected: boolean; error?: string };
 
 export type DaemonConnectionOptions = {
   socketPath?: string;

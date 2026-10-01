@@ -4,7 +4,7 @@ import { join } from 'node:path';
 export type DesktopEntryInfo = { name?: string; icon?: string; startupWMClass?: string };
 
 /** Directories searched for `<appId>.desktop`, per the XDG base directory spec plus Flatpak/Snap exports. */
-export function applicationDirs(env: NodeJS.ProcessEnv = process.env): string[] {
+function applicationDirs(env: NodeJS.ProcessEnv = process.env): string[] {
   const home = env.HOME ?? '';
   const dataHome = env.XDG_DATA_HOME || join(home, '.local', 'share');
   const dataDirs = (env.XDG_DATA_DIRS || '/usr/local/share:/usr/share').split(':').filter(Boolean);

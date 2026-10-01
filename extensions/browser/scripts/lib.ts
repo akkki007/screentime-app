@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 
-export const HOST_NAME = 'io.github.akkki007.screentime';
-export const FIREFOX_EXTENSION_ID = 'screentime@akkki007.github.io';
+const HOST_NAME = 'io.github.akkki007.screentime';
+const FIREFOX_EXTENSION_ID = 'screentime@akkki007.github.io';
 
 export type Target = 'chromium' | 'firefox';
 export type Browser = 'firefox' | 'chrome' | 'chromium' | 'brave';

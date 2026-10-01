@@ -14,7 +14,6 @@
   "dependencies": {
     "@screentime/db": "workspace:*",
     "@screentime/shared": "workspace:*",
-    "dbus-next": "^0.10.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

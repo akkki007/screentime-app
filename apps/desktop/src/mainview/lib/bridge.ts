@@ -19,6 +19,9 @@ export type Bridge = {
 export async function createBridge(): Promise<Bridge> {
   const inElectrobun = typeof (window as { __electrobun?: unknown }).__electrobun !== 'undefined';
   if (!inElectrobun) {
+    // The in-memory mock is for browser previews only. This branch is removed
+    // from production builds, so the mock never ships inside the app.
+    if (!import.meta.env.DEV) throw new Error('Screentime must run inside its desktop app.');
     const { createMockBridge } = await import('./mock');
     return createMockBridge();
   }

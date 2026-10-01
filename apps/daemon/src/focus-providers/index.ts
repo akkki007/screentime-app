@@ -20,5 +20,3 @@ export async function selectFocusProvider(): Promise<FocusProvider> {
       `XDG_CURRENT_DESKTOP=${process.env.XDG_CURRENT_DESKTOP}`,
   );
 }
-
-export { GnomeWaylandFocusProvider, X11FocusProvider };

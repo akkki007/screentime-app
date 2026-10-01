@@ -11,7 +11,7 @@ import { daemon, getBridge } from './api';
 
 export type ViewId = 'today' | 'week' | 'apps' | 'limits' | 'wellbeing' | 'settings';
 
-export type Toast = { id: number; kind: 'info' | 'error' | 'success'; message: string };
+type Toast = { id: number; kind: 'info' | 'error' | 'success'; message: string };
 
 class Store {
   ready = $state(false);

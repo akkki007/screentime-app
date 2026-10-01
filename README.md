@@ -20,7 +20,7 @@ An open-source, local-first screentime and digital wellbeing app for Linux: trac
 
 - **Local-only data.** Everything lives in `~/.local/share/screentime/`. Nothing is uploaded anywhere.
 - **No telemetry.** The daemon never makes a network call.
-- **Low idle footprint.** The tracker is a lightweight background service, not an Electron app running 24/7 (about 55 MB resident while idle).
+- **Low idle footprint.** The tracker is a lightweight background service, not an Electron app running 24/7 (about 43 MB resident while idle).
 - **Pluggable per-desktop adapters.** GNOME Wayland and X11 now; KDE Wayland and wlroots compositors next.
 
 **Non-goals for v1:** cloud sync, mobile apps, multi-user parental controls. Limits are nudges, not locks: v1 never closes an app or blocks a site.

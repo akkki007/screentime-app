@@ -1,46 +1,7 @@
 import type { FocusProvider, FocusedWindow, Unsubscribe } from '@screentime/shared';
 import { buildWmClassIndex } from '../desktop-entries';
+import { type Runner, bunRunner } from '../runner';
 import { parseActiveWindow, parseWindowProps } from '../x11-parse';
-
-/** Runs external commands; swapped for a fake in tests. */
-export type Runner = {
-  /** Runs a command to completion. */
-  run(cmd: string[]): Promise<{ stdout: string; ok: boolean }>;
-  /** Starts a long-running command, delivering each stdout line. Returns a stop function. */
-  stream(cmd: string[], onLine: (line: string) => void): () => void;
-  /** Whether a binary is on PATH. */
-  has(binary: string): boolean;
-};
-
-export const bunRunner: Runner = {
-  async run(cmd) {
-    try {
-      const proc = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'ignore' });
-      const stdout = await new Response(proc.stdout).text();
-      return { stdout, ok: (await proc.exited) === 0 };
-    } catch {
-      return { stdout: '', ok: false };
-    }
-  },
-  stream(cmd, onLine) {
-    const proc = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'ignore' });
-    (async () => {
-      const decoder = new TextDecoder();
-      let buffer = '';
-      for await (const chunk of proc.stdout) {
-        buffer += decoder.decode(chunk, { stream: true });
-        let i: number;
-        // biome-ignore lint/suspicious/noAssignInExpressions: line splitter
-        while ((i = buffer.indexOf('\n')) !== -1) {
-          onLine(buffer.slice(0, i));
-          buffer = buffer.slice(i + 1);
-        }
-      }
-    })().catch(() => {});
-    return () => proc.kill();
-  },
-  has: (binary) => Bun.which(binary) !== null,
-};
 
 const IDLE_POLL_MS = 5_000;
 
@@ -91,7 +52,7 @@ export class X11FocusProvider implements FocusProvider {
 
     return () => {
       disposed = true;
-      stop();
+      stop.stop();
     };
   }
 

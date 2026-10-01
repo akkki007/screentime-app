@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FocusedWindow } from '@screentime/shared';
 import { buildWmClassIndex } from './desktop-entries';
-import { type Runner, X11FocusProvider } from './focus-providers/x11';
+import { X11FocusProvider } from './focus-providers/x11';
+import type { Runner } from './runner';
 import { parseActiveWindow, parseWindowProps } from './x11-parse';
 
 describe('parseActiveWindow', () => {
@@ -83,8 +84,11 @@ function fakeRunner(opts: {
     },
     stream(_cmd, onLine) {
       emit = onLine;
-      return () => {
-        stopped = true;
+      return {
+        stop: () => {
+          stopped = true;
+        },
+        exited: new Promise<void>(() => {}),
       };
     },
     has: (b) => (opts.has ?? ['xprop', 'xprintidle']).includes(b),

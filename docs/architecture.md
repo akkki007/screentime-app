@@ -43,9 +43,9 @@ The whole stack is TypeScript/JavaScript, so contributors need only one language
 | --- | --- | --- |
 | Desktop shell | Electrobun 2 (WebKitGTK, Bun main process, built with Hutch) | Small bundles, TS end to end; see [ADR 2](adr/0002-electrobun-with-a-bun-main-process.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
-| Charts | uPlot (bar/time series), ECharts (donut, tree-shaken) | Fast, and ECharts is imported per-chart rather than whole |
+| Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
 | Daemon | Bun + TypeScript | Shares types with the UI; one toolchain |
-| D-Bus | `dbus-next` | Pure JS; confirm it works under Bun in the spike |
+| D-Bus | the `gdbus` tool (`monitor` for signals, `call` for methods) | `dbus-next` worked under Bun but cost ~25 MB resident; see [ADR 6](adr/0006-dbus-through-gdbus.md) |
 | Storage | SQLite via `bun:sqlite`, WAL mode | Zero-dependency, fast, easy to back up |
 | IPC | JSON-RPC 2.0 over a Unix socket | Simple, language-neutral, easy to debug with `socat` |
 | Schemas | Zod (shared package) | One source of truth for IPC and config |
@@ -181,8 +181,8 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 
 | Phase | Scope | Exit criteria | Status |
 | --- | --- | --- | --- |
-| 0. Spike | Electrobun hello world on Ubuntu; GNOME extension logs focus; `dbus-next` under Bun | Focus changes print in the daemon terminal | **Done.** `dbus-next` works under Bun; Electrobun runs on Ubuntu 26/GNOME 50 |
-| 1. Tracker | Daemon, GNOME adapter, idle, SQLite, systemd unit | 24 h of accurate sessions, daemon under 60 MB RSS | **Built and unit-tested.** Idle RSS measured 54–57 MB (tight); the 24 h soak has not been run |
+| 0. Spike | Electrobun hello world on Ubuntu; GNOME extension logs focus; D-Bus from Bun | Focus changes print in the daemon terminal | **Done.** Electrobun runs on Ubuntu 26.04/GNOME 50; D-Bus first used `dbus-next`, later replaced by `gdbus` (ADR 6) |
+| 1. Tracker | Daemon, GNOME adapter, idle, SQLite, systemd unit | 24 h of accurate sessions, daemon under 60 MB RSS | **Built and unit-tested.** Idle RSS 43 MB (was 62 MB with `dbus-next`); the 24 h soak has not been run |
 | 2. Dashboard | Electrobun UI: today, week, per-app view, tray, pause | Totals match a manual check to within 1 min per hour | **Built.** Runs against the live daemon; the manual accuracy check has not been done |
 | 3. Wellbeing | Break reminders, daily limits (notify + overlay), downtime schedule, focus mode | Limits fire reliably across suspend/resume | **Built.** Suspend/resume covered with a fake clock; not yet exercised on a real suspend |
 | 4. Web + desktops | Browser extension, X11 adapter, categories | Per-site time works in Firefox and Chromium | **Built, not browser-tested.** Native host verified end to end; the extension itself has not been loaded in a real browser. X11 adapter unit-tested only (no X11 session available) |
@@ -205,8 +205,8 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 | --- | --- | --- |
 | Electrobun is young; Linux tray and WebKitGTK may have quirks | UI bugs, blocked features | Keep the UI a thin client of the daemon; Tauri is the fallback shell |
 | GNOME Shell API changes each release | Extension breaks on upgrade | Keep the extension tiny (focus only); test on the current and previous GNOME |
-| `dbus-next` gaps under Bun | Daemon can't reach the session bus | Checked in the Phase 0 spike; fallback is shelling out to `gdbus` |
-| Bun memory while idle | Heavy for an always-on service | Measured 54–57 MB idle at start, only ~3 MB under the 60 MB budget. Re-measure after a 24 h run; port the daemon to Rust if it stays over 60 MB |
+| Daemon can't reach the session bus | No focus or notifications | The `gdbus` tool is part of GLib and present on GNOME systems; the provider reports it as unavailable if missing |
+| Bun memory while idle | Heavy for an always-on service | A bare Bun process is ~14 MB; the daemon was 62 MB with `dbus-next`, now ~43 MB. Re-measure after a 24 h run; port the daemon to Rust if it stays over 60 MB |
 | Users can bypass soft limits | Weak enforcement | Treat v1 as nudges; tamper resistance goes in the v2 privileged helper |
 
 - [x] Project name and app ID: `screentime` / `io.github.akkki007.screentime` (already used throughout)

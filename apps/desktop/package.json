@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@screentime/shared": "workspace:*",
-    "echarts": "^5.5.1",
     "uplot": "^1.6.31"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import { APP_ID } from '@screentime/shared';
-import { sessionBus } from 'dbus-next';
+import { quoteString } from './gvariant';
+import { type Runner, bunRunner } from './runner';
 
 export interface Notifier {
   notify(title: string, body: string): Promise<void>;
@@ -7,28 +8,34 @@ export interface Notifier {
 
 /**
  * Desktop notifications over `org.freedesktop.Notifications`, which every
- * desktop implements. Connects lazily and reconnects after a failure.
+ * desktop implements, via `gdbus` (no D-Bus library in the daemon; see ADR 6).
  */
 export class DbusNotifier implements Notifier {
-  private bus: ReturnType<typeof sessionBus> | undefined;
+  constructor(private readonly runner: Runner = bunRunner) {}
 
   async notify(title: string, body: string): Promise<void> {
-    try {
-      this.bus ??= sessionBus();
-      const obj = await this.bus.getProxyObject(
-        'org.freedesktop.Notifications',
-        '/org/freedesktop/Notifications',
-      );
-      const iface = obj.getInterface('org.freedesktop.Notifications');
-      const notify = iface.Notify;
-      if (!notify) throw new Error('org.freedesktop.Notifications has no Notify method');
-      // (app_name, replaces_id, icon, summary, body, actions, hints, expire_timeout)
-      await notify.call(iface, 'Screentime', 0, APP_ID, title, body, [], {}, 8_000);
-    } catch (err) {
-      // A missing notification daemon must never take tracking down.
-      console.error('[notifier] failed to send notification:', err);
-      this.bus?.disconnect();
-      this.bus = undefined;
-    }
+    // Notify(app_name, replaces_id, icon, summary, body, actions, hints, expire_timeout)
+    const { ok } = await this.runner.run([
+      'gdbus',
+      'call',
+      '--session',
+      '--dest',
+      'org.freedesktop.Notifications',
+      '--object-path',
+      '/org/freedesktop/Notifications',
+      '--method',
+      'org.freedesktop.Notifications.Notify',
+      'Screentime',
+      '0',
+      quoteString(APP_ID),
+      quoteString(title),
+      quoteString(body),
+      '[]',
+      '{}',
+      '8000',
+    ]);
+    // A missing notification daemon must never take tracking down.
+    if (!ok)
+      console.error('[notifier] could not send a notification (is a notification daemon running?)');
   }
 }
