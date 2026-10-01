@@ -4,8 +4,9 @@
  * See docs/architecture.md#ipc-contracts for the full contract table.
  */
 import { z } from 'zod';
+import { SettingsPatchSchema, SettingsSchema } from './settings';
 
-export const GroupBySchema = z.enum(['app', 'category', 'hour']);
+export const GroupBySchema = z.enum(['app', 'category', 'hour', 'day']);
 export type GroupBy = z.infer<typeof GroupBySchema>;
 
 export const UsageSummaryRequestSchema = z.object({
@@ -36,6 +37,69 @@ export const SessionSchema = z.object({
 });
 export type Session = z.infer<typeof SessionSchema>;
 
+export const UsageWebRequestSchema = z.object({
+  from: z.number().int(),
+  to: z.number().int(),
+});
+export type UsageWebRequest = z.infer<typeof UsageWebRequestSchema>;
+
+export const CategorySchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  color: z.string().nullable(),
+  /** 1 productive, 0 distracting, null neutral. */
+  productive: z.number().int().nullable(),
+});
+export type Category = z.infer<typeof CategorySchema>;
+
+export const AppInfoSchema = z.object({
+  appId: z.string(),
+  name: z.string().nullable(),
+  icon: z.string().nullable(),
+  categoryId: z.number().int().nullable(),
+});
+export type AppInfo = z.infer<typeof AppInfoSchema>;
+
+export const SetAppCategoryRequestSchema = z.object({
+  appId: z.string(),
+  categoryId: z.number().int().nullable(),
+});
+
+export const TrackerStatusSchema = z.object({
+  paused: z.boolean(),
+  resumeAt: z.number().int().nullable(),
+  idle: z.boolean(),
+  currentAppId: z.string().nullable(),
+  /** Unix ms when the current app took focus, if tracked. */
+  since: z.number().int().nullable(),
+  focusMode: z.object({ active: z.boolean(), until: z.number().int().nullable() }),
+});
+export type TrackerStatus = z.infer<typeof TrackerStatusSchema>;
+
+export const FocusModeStartRequestSchema = z.object({
+  minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 60),
+});
+
+export const DataExportRequestSchema = z.object({
+  format: z.enum(['csv', 'json']),
+  from: z.number().int().optional(),
+  to: z.number().int().optional(),
+});
+export const DataExportResponseSchema = z.object({
+  filename: z.string(),
+  content: z.string(),
+});
+export type DataExportResponse = z.infer<typeof DataExportResponseSchema>;
+
+export const DataWipeRequestSchema = z.object({
+  /** Also reset settings, limits and category overrides. */
+  everything: z.boolean().default(false),
+});
+
 export const LimitTargetTypeSchema = z.enum(['app', 'category', 'domain']);
 export const LimitActionSchema = z.enum(['notify', 'overlay', 'block']);
 
@@ -44,7 +108,14 @@ export const LimitSchema = z.object({
   targetType: LimitTargetTypeSchema,
   target: z.string(),
   dailyMs: z.number().int().positive(),
-  schedule: z.string().optional(),
+  /**
+   * Optional daily window ("HH:MM-HH:MM", may wrap midnight) during which the
+   * limit is enforced. Usage still counts for the whole day.
+   */
+  schedule: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/, 'expected HH:MM-HH:MM')
+    .optional(),
   action: LimitActionSchema,
 });
 export type Limit = z.infer<typeof LimitSchema>;
@@ -64,6 +135,12 @@ export const FocusEventSchema = z.object({
   since: z.number().int(),
 });
 export type FocusEvent = z.infer<typeof FocusEventSchema>;
+
+export const ReminderEventSchema = z.object({
+  kind: z.enum(['break', 'downtime', 'focus']),
+  message: z.string(),
+});
+export type ReminderEvent = z.infer<typeof ReminderEventSchema>;
 
 export const LimitHitEventSchema = z.object({
   limitId: z.number().int(),
@@ -100,15 +177,55 @@ export const RpcMethods = {
   },
   'settings.get': {
     request: z.void(),
-    response: z.record(z.string(), z.unknown()),
+    response: SettingsSchema,
   },
   'settings.set': {
-    request: z.record(z.string(), z.unknown()),
-    response: z.object({ ok: z.boolean() }),
+    request: SettingsPatchSchema,
+    response: SettingsSchema,
   },
   'tracker.pause': {
     request: TrackerPauseRequestSchema,
     response: TrackerPauseResponseSchema,
+  },
+  'tracker.resume': {
+    request: z.void(),
+    response: z.object({ ok: z.boolean() }),
+  },
+  'tracker.status': {
+    request: z.void(),
+    response: TrackerStatusSchema,
+  },
+  'usage.web': {
+    request: UsageWebRequestSchema,
+    response: z.array(UsageSummaryRowSchema),
+  },
+  'apps.list': {
+    request: z.void(),
+    response: z.array(AppInfoSchema),
+  },
+  'apps.setCategory': {
+    request: SetAppCategoryRequestSchema,
+    response: z.object({ ok: z.boolean() }),
+  },
+  'categories.list': {
+    request: z.void(),
+    response: z.array(CategorySchema),
+  },
+  'focus.start': {
+    request: FocusModeStartRequestSchema,
+    response: z.object({ until: z.number().int() }),
+  },
+  'focus.stop': {
+    request: z.void(),
+    response: z.object({ ok: z.boolean() }),
+  },
+  'data.export': {
+    request: DataExportRequestSchema,
+    response: DataExportResponseSchema,
+  },
+  'data.wipe': {
+    request: DataWipeRequestSchema,
+    response: z.object({ ok: z.boolean() }),
   },
 } as const;
 
@@ -116,11 +233,13 @@ export const RpcMethods = {
 export const RpcNotifications = {
   'event.focus': FocusEventSchema,
   'event.limitHit': LimitHitEventSchema,
+  'event.reminder': ReminderEventSchema,
+  'event.status': TrackerStatusSchema,
 } as const;
 
 /** browser extension (via the native messaging host) → daemon notification. */
 export const BrowserActiveTabSchema = z.object({
-  domain: z.string().optional(),
+  domain: z.string().max(253).optional(),
   active: z.boolean(),
 });
 export type BrowserActiveTab = z.infer<typeof BrowserActiveTabSchema>;

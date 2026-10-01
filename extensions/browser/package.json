@@ -5,9 +5,11 @@
   "type": "module",
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "build": "bun build src/background.ts --outdir dist --target browser && bun build native-host/host.ts --outdir dist/native-host --target bun",
+    "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "install:host": "bun run scripts/install-native-host.ts",
+    "uninstall:host": "bun run scripts/install-native-host.ts --uninstall"
   },
   "dependencies": {
     "@screentime/shared": "workspace:*"

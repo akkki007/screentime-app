@@ -1,0 +1,36 @@
+name: Release build
+
+# Builds the .deb when a version tag is pushed. Not yet exercised on GitHub:
+# test it with a throwaway tag before relying on it.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  deb:
+    name: Build .deb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Build the package
+        run: packaging/deb/build.sh
+
+      - name: Upload the .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: screentime-deb
+          path: dist/*.deb

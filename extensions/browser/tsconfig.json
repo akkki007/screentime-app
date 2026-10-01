@@ -5,5 +5,5 @@
     "rootDir": ".",
     "types": ["chrome", "bun"]
   },
-  "include": ["src", "native-host"]
+  "include": ["src", "native-host", "scripts"]
 }
