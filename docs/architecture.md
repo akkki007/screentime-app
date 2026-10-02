@@ -170,6 +170,7 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 ├─ packages/
 │  ├─ shared/             # Zod schemas, RPC types, constants
 │  └─ db/                 # migrations, queries
+├─ contract/              # frozen IPC contract: JSON Schema + golden fixtures
 ├─ packaging/             # systemd unit, .desktop, deb/AppImage scripts
 ├─ docs/                  # architecture, ADRs, adapter guide
 └─ .github/               # CI, issue/PR templates

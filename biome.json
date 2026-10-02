@@ -12,6 +12,8 @@
       "**/.hutch",
       "**/artifacts",
       "**/build",
+      "contract/fixtures/*.json",
+      "contract/schema",
       "**/dist",
       "*.min.js",
       "build",

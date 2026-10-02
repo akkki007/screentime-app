@@ -1,0 +1,691 @@
+{
+  "scenario": "usage",
+  "description": "Read-only usage queries over the seed data",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": [
+            {
+              "key": "code",
+              "ms": 10200000
+            },
+            {
+              "key": "com.spotify.Client",
+              "ms": 2700000
+            },
+            {
+              "key": "org.gnome.Nautilus",
+              "ms": 1800000
+            },
+            {
+              "key": "org.mozilla.firefox",
+              "ms": 1800000
+            },
+            {
+              "key": "org.gnome.Ptyxis",
+              "ms": 1200000
+            },
+            {
+              "key": "org.telegram.desktop",
+              "ms": 600000
+            },
+            {
+              "key": "com.example.Unknown",
+              "ms": 300000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "groupBy": "category"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": [
+            {
+              "key": "Development",
+              "ms": 11400000
+            },
+            {
+              "key": "Entertainment",
+              "ms": 2700000
+            },
+            {
+              "key": "Browsing",
+              "ms": 1800000
+            },
+            {
+              "key": "Productivity",
+              "ms": 1800000
+            },
+            {
+              "key": "Communication",
+              "ms": 600000
+            },
+            {
+              "key": "Uncategorized",
+              "ms": 300000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "groupBy": "hour"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": [
+            {
+              "key": "00",
+              "ms": 2700000
+            },
+            {
+              "key": "08",
+              "ms": 1200000
+            },
+            {
+              "key": "09",
+              "ms": 3600000
+            },
+            {
+              "key": "10",
+              "ms": 3600000
+            },
+            {
+              "key": "11",
+              "ms": 600000
+            },
+            {
+              "key": "12",
+              "ms": 300000
+            },
+            {
+              "key": "13",
+              "ms": 1800000
+            },
+            {
+              "key": "14",
+              "ms": 3600000
+            },
+            {
+              "key": "15",
+              "ms": 1200000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790188200000,
+          "to": 1790762400000,
+          "groupBy": "day"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": [
+            {
+              "key": "2026-09-27",
+              "ms": 7200000
+            },
+            {
+              "key": "2026-09-29",
+              "ms": 13500000
+            },
+            {
+              "key": "2026-09-30",
+              "ms": 18600000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790188200000,
+          "to": 1790762400000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": [
+            {
+              "key": "code",
+              "ms": 26400000
+            },
+            {
+              "key": "com.spotify.Client",
+              "ms": 4500000
+            },
+            {
+              "key": "org.mozilla.firefox",
+              "ms": 4500000
+            },
+            {
+              "key": "org.gnome.Nautilus",
+              "ms": 1800000
+            },
+            {
+              "key": "org.gnome.Ptyxis",
+              "ms": 1200000
+            },
+            {
+              "key": "org.telegram.desktop",
+              "ms": 600000
+            },
+            {
+              "key": "com.example.Unknown",
+              "ms": 300000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790740800000,
+          "to": 1790742600000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": [
+            {
+              "key": "code",
+              "ms": 1800000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790762400000,
+          "to": 1790762400000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790762400000,
+          "to": 1790706600000,
+          "groupBy": "day"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 8,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "usage.timeline",
+        "params": {
+          "date": "2026-09-30"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 9,
+          "result": [
+            {
+              "id": 5,
+              "appId": "com.spotify.Client",
+              "startTs": 1790704800000,
+              "endTs": 1790709300000,
+              "source": "desktop"
+            },
+            {
+              "id": 6,
+              "appId": "org.gnome.Ptyxis",
+              "startTs": 1790735400000,
+              "endTs": 1790736600000,
+              "source": "desktop"
+            },
+            {
+              "id": 7,
+              "appId": "code",
+              "startTs": 1790739000000,
+              "endTs": 1790744400000,
+              "source": "desktop"
+            },
+            {
+              "id": 8,
+              "appId": "org.mozilla.firefox",
+              "startTs": 1790744400000,
+              "endTs": 1790746200000,
+              "source": "browser"
+            },
+            {
+              "id": 9,
+              "appId": "org.telegram.desktop",
+              "startTs": 1790746200000,
+              "endTs": 1790746800000,
+              "source": "desktop"
+            },
+            {
+              "id": 10,
+              "appId": "com.example.Unknown",
+              "startTs": 1790749800000,
+              "endTs": 1790750100000,
+              "source": "desktop"
+            },
+            {
+              "id": 11,
+              "appId": "org.gnome.Nautilus",
+              "startTs": 1790753400000,
+              "endTs": 1790755200000,
+              "source": "desktop"
+            },
+            {
+              "id": 12,
+              "appId": "code",
+              "startTs": 1790757000000,
+              "endTs": 1790761800000,
+              "source": "desktop"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "usage.timeline",
+        "params": {
+          "date": "2026-09-29"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 10,
+          "result": [
+            {
+              "id": 3,
+              "appId": "code",
+              "startTs": 1790652600000,
+              "endTs": 1790661600000,
+              "source": "desktop"
+            },
+            {
+              "id": 4,
+              "appId": "org.mozilla.firefox",
+              "title": "Docs",
+              "startTs": 1790661600000,
+              "endTs": 1790664300000,
+              "source": "desktop"
+            },
+            {
+              "id": 5,
+              "appId": "com.spotify.Client",
+              "startTs": 1790704800000,
+              "endTs": 1790709300000,
+              "source": "desktop"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "usage.timeline",
+        "params": {
+          "date": "2026-01-01"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 11,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "usage.web",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 12,
+          "result": [
+            {
+              "key": "github.com",
+              "ms": 1200000
+            },
+            {
+              "key": "youtube.com",
+              "ms": 600000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "usage.web",
+        "params": {
+          "from": 1790188200000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 13,
+          "result": [
+            {
+              "key": "youtube.com",
+              "ms": 3300000
+            },
+            {
+              "key": "github.com",
+              "ms": 1200000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "apps.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 14,
+          "result": [
+            {
+              "appId": "org.gnome.Nautilus",
+              "name": "Files",
+              "icon": null,
+              "categoryId": 2
+            },
+            {
+              "appId": "org.mozilla.firefox",
+              "name": "Firefox",
+              "icon": "firefox",
+              "categoryId": 6
+            },
+            {
+              "appId": "com.spotify.Client",
+              "name": "Spotify",
+              "icon": null,
+              "categoryId": 5
+            },
+            {
+              "appId": "org.telegram.desktop",
+              "name": "Telegram",
+              "icon": null,
+              "categoryId": 3
+            },
+            {
+              "appId": "org.gnome.Ptyxis",
+              "name": "Terminal",
+              "icon": null,
+              "categoryId": 1
+            },
+            {
+              "appId": "com.example.Unknown",
+              "name": "Unknown Tool",
+              "icon": null,
+              "categoryId": null
+            },
+            {
+              "appId": "code",
+              "name": "Visual Studio Code",
+              "icon": "vscode",
+              "categoryId": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "categories.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 15,
+          "result": [
+            {
+              "id": 1,
+              "name": "Development",
+              "color": "#4f8cff",
+              "productive": 1
+            },
+            {
+              "id": 2,
+              "name": "Productivity",
+              "color": "#34c38f",
+              "productive": 1
+            },
+            {
+              "id": 3,
+              "name": "Communication",
+              "color": "#a78bfa",
+              "productive": null
+            },
+            {
+              "id": 4,
+              "name": "Social",
+              "color": "#f472b6",
+              "productive": 0
+            },
+            {
+              "id": 5,
+              "name": "Entertainment",
+              "color": "#fb923c",
+              "productive": 0
+            },
+            {
+              "id": 6,
+              "name": "Browsing",
+              "color": "#facc15",
+              "productive": null
+            },
+            {
+              "id": 7,
+              "name": "Utilities",
+              "color": "#94a3b8",
+              "productive": null
+            },
+            {
+              "id": 8,
+              "name": "Other",
+              "color": "#64748b",
+              "productive": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "limits.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 16,
+          "result": [
+            {
+              "id": 1,
+              "targetType": "app",
+              "target": "com.spotify.Client",
+              "dailyMs": 1800000,
+              "action": "notify"
+            },
+            {
+              "id": 2,
+              "targetType": "category",
+              "target": "Entertainment",
+              "dailyMs": 3600000,
+              "schedule": "09:00-18:00",
+              "action": "overlay"
+            },
+            {
+              "id": 3,
+              "targetType": "domain",
+              "target": "youtube.com",
+              "dailyMs": 2700000,
+              "action": "notify"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "settings.get"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 17,
+          "result": {
+            "captureTitles": false,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 18,
+          "result": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

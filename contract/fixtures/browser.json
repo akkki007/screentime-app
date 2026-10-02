@@ -1,0 +1,80 @@
+{
+  "scenario": "browser",
+  "description": "Messages from the browser native host get no reply",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "method": "browser.activeTab",
+        "params": {
+          "domain": "example.com",
+          "active": true
+        }
+      },
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "method": "browser.activeTab",
+        "params": {
+          "active": false
+        }
+      },
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "method": "browser.activeTab",
+        "params": {
+          "domain": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "active": true
+        }
+      },
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "method": "browser.activeTab",
+        "params": {
+          "domain": "example.com"
+        }
+      },
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "usage.web",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": [
+            {
+              "key": "github.com",
+              "ms": 1200000
+            },
+            {
+              "key": "youtube.com",
+              "ms": 600000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

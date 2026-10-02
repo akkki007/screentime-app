@@ -1,0 +1,172 @@
+{
+  "scenario": "apps",
+  "description": "Changing app categories",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "apps.setCategory",
+        "params": {
+          "appId": "code",
+          "categoryId": 2
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "apps.setCategory",
+        "params": {
+          "appId": "org.gnome.Nautilus",
+          "categoryId": null
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "apps.setCategory",
+        "params": {
+          "appId": "com.example.Missing",
+          "categoryId": 1
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "ok": false
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "apps.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": [
+            {
+              "appId": "org.gnome.Nautilus",
+              "name": "Files",
+              "icon": null,
+              "categoryId": null
+            },
+            {
+              "appId": "org.mozilla.firefox",
+              "name": "Firefox",
+              "icon": "firefox",
+              "categoryId": 6
+            },
+            {
+              "appId": "com.spotify.Client",
+              "name": "Spotify",
+              "icon": null,
+              "categoryId": 5
+            },
+            {
+              "appId": "org.telegram.desktop",
+              "name": "Telegram",
+              "icon": null,
+              "categoryId": 3
+            },
+            {
+              "appId": "org.gnome.Ptyxis",
+              "name": "Terminal",
+              "icon": null,
+              "categoryId": 1
+            },
+            {
+              "appId": "com.example.Unknown",
+              "name": "Unknown Tool",
+              "icon": null,
+              "categoryId": null
+            },
+            {
+              "appId": "code",
+              "name": "Visual Studio Code",
+              "icon": "vscode",
+              "categoryId": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "groupBy": "category"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": [
+            {
+              "key": "Productivity",
+              "ms": 10200000
+            },
+            {
+              "key": "Entertainment",
+              "ms": 2700000
+            },
+            {
+              "key": "Uncategorized",
+              "ms": 2100000
+            },
+            {
+              "key": "Browsing",
+              "ms": 1800000
+            },
+            {
+              "key": "Development",
+              "ms": 1200000
+            },
+            {
+              "key": "Communication",
+              "ms": 600000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

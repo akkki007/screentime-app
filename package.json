@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Local-first screentime and digital wellbeing tracker for Linux",
   "license": "GPL-3.0-or-later",
-  "workspaces": ["apps/*", "packages/*", "extensions/browser"],
+  "workspaces": ["apps/*", "packages/*", "extensions/browser", "contract"],
   "scripts": {
     "lint": "biome check .",
     "format": "biome format --write .",

@@ -1,0 +1,200 @@
+{
+  "scenario": "limits",
+  "description": "Creating, updating and deleting limits",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "limits.set",
+        "params": {
+          "targetType": "app",
+          "target": "code",
+          "dailyMs": 7200000,
+          "action": "notify"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "id": 4,
+            "targetType": "app",
+            "target": "code",
+            "dailyMs": 7200000,
+            "action": "notify"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "limits.set",
+        "params": {
+          "targetType": "domain",
+          "target": "reddit.com",
+          "dailyMs": 900000,
+          "action": "overlay",
+          "schedule": "22:00-06:00"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "id": 5,
+            "targetType": "domain",
+            "target": "reddit.com",
+            "dailyMs": 900000,
+            "schedule": "22:00-06:00",
+            "action": "overlay"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "limits.set",
+        "params": {
+          "id": 1,
+          "targetType": "app",
+          "target": "com.spotify.Client",
+          "dailyMs": 2700000,
+          "action": "overlay"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "id": 1,
+            "targetType": "app",
+            "target": "com.spotify.Client",
+            "dailyMs": 2700000,
+            "action": "overlay"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "limits.set",
+        "params": {
+          "targetType": "domain",
+          "target": "youtube.com",
+          "dailyMs": 60000,
+          "action": "notify"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "id": 3,
+            "targetType": "domain",
+            "target": "youtube.com",
+            "dailyMs": 60000,
+            "action": "notify"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "limits.delete",
+        "params": {
+          "id": 2
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "limits.delete",
+        "params": {
+          "id": 999
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": {
+            "ok": false
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "limits.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": [
+            {
+              "id": 1,
+              "targetType": "app",
+              "target": "com.spotify.Client",
+              "dailyMs": 2700000,
+              "action": "overlay"
+            },
+            {
+              "id": 3,
+              "targetType": "domain",
+              "target": "youtube.com",
+              "dailyMs": 60000,
+              "action": "notify"
+            },
+            {
+              "id": 4,
+              "targetType": "app",
+              "target": "code",
+              "dailyMs": 7200000,
+              "action": "notify"
+            },
+            {
+              "id": 5,
+              "targetType": "domain",
+              "target": "reddit.com",
+              "dailyMs": 900000,
+              "schedule": "22:00-06:00",
+              "action": "overlay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

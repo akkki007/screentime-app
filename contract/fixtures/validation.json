@@ -1,0 +1,545 @@
+{
+  "scenario": "validation",
+  "description": "Malformed params are rejected with -32603 and a field: reason message",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "error": {
+            "code": -32603,
+            "message": "groupBy: Required"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "groupBy": "week"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "error": {
+            "code": -32603,
+            "message": "groupBy: Invalid enum value. Expected 'app' | 'category' | 'hour' | 'day', received 'week'"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "usage.summary",
+        "params": {
+          "from": 1.5,
+          "to": 1790762400000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "error": {
+            "code": -32603,
+            "message": "from: Expected integer, received float"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "usage.summary"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "error": {
+            "code": -32603,
+            "message": "params: Required"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "usage.timeline",
+        "params": {}
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "error": {
+            "code": -32603,
+            "message": "date: Required"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "usage.timeline",
+        "params": {
+          "date": "not-a-date"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "error": {
+            "code": -32603,
+            "message": "invalid date: not-a-date"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "limits.set",
+        "params": {
+          "targetType": "app",
+          "target": "code",
+          "dailyMs": 0,
+          "action": "notify"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "error": {
+            "code": -32603,
+            "message": "dailyMs: Number must be greater than 0"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "limits.set",
+        "params": {
+          "targetType": "app",
+          "target": "code",
+          "dailyMs": 60000,
+          "action": "notify",
+          "schedule": "9-17"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 8,
+          "error": {
+            "code": -32603,
+            "message": "schedule: expected HH:MM-HH:MM"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "limits.set",
+        "params": {
+          "targetType": "website",
+          "target": "x.com",
+          "dailyMs": 60000,
+          "action": "notify"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 9,
+          "error": {
+            "code": -32603,
+            "message": "targetType: Invalid enum value. Expected 'app' | 'category' | 'domain', received 'website'"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "limits.delete",
+        "params": {
+          "id": "one"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 10,
+          "error": {
+            "code": -32603,
+            "message": "id: Expected number, received string"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "settings.set",
+        "params": {
+          "idleThresholdMinutes": 0
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 11,
+          "error": {
+            "code": -32603,
+            "message": "idleThresholdMinutes: Number must be greater than or equal to 1"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "settings.set",
+        "params": {
+          "idleThresholdMinutes": 61
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 12,
+          "error": {
+            "code": -32603,
+            "message": "idleThresholdMinutes: Number must be less than or equal to 60"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "settings.set",
+        "params": {
+          "downtimeStart": "25:00"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 13,
+          "error": {
+            "code": -32603,
+            "message": "downtimeStart: expected HH:MM"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "settings.set",
+        "params": {
+          "noSuchSetting": true
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 14,
+          "error": {
+            "code": -32603,
+            "message": "params: Unrecognized key(s) in object: 'noSuchSetting'"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "tracker.pause",
+        "params": {
+          "minutes": 0
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 15,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be greater than 0"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "tracker.pause",
+        "params": {
+          "minutes": -5
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 16,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be greater than 0"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "focus.start",
+        "params": {
+          "minutes": 0
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 17,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be greater than 0"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "focus.start",
+        "params": {
+          "minutes": 1441
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 18,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be less than or equal to 1440"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 19,
+        "method": "data.export",
+        "params": {
+          "format": "xml"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 19,
+          "error": {
+            "code": -32603,
+            "message": "format: Invalid enum value. Expected 'csv' | 'json', received 'xml'"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 20,
+        "method": "data.wipe"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 20,
+          "error": {
+            "code": -32603,
+            "message": "params: Required"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 21,
+        "method": "apps.setCategory",
+        "params": {
+          "appId": "code"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 21,
+          "error": {
+            "code": -32603,
+            "message": "categoryId: Required"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 22,
+        "method": "limits.list",
+        "params": {}
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 22,
+          "error": {
+            "code": -32603,
+            "message": "params: Expected void, received object"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 23,
+        "method": "usage.web",
+        "params": {
+          "from": 1790706600000,
+          "to": 1790762400000,
+          "extra": 1
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 23,
+          "result": [
+            {
+              "key": "github.com",
+              "ms": 1200000
+            },
+            {
+              "key": "youtube.com",
+              "ms": 600000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 24,
+        "method": "limits.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 24,
+          "result": [
+            {
+              "id": 1,
+              "targetType": "app",
+              "target": "com.spotify.Client",
+              "dailyMs": 1800000,
+              "action": "notify"
+            },
+            {
+              "id": 2,
+              "targetType": "category",
+              "target": "Entertainment",
+              "dailyMs": 3600000,
+              "schedule": "09:00-18:00",
+              "action": "overlay"
+            },
+            {
+              "id": 3,
+              "targetType": "domain",
+              "target": "youtube.com",
+              "dailyMs": 2700000,
+              "action": "notify"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 25,
+        "method": "settings.get"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 25,
+          "result": {
+            "captureTitles": false,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true
+          }
+        }
+      ]
+    }
+  ]
+}

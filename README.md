@@ -47,6 +47,7 @@ adapters/              per-desktop focus/idle adapters (GNOME extension; X11 liv
 extensions/browser/    WebExtension + native messaging host
 packages/shared/       Zod schemas, RPC types, settings, categories
 packages/db/           SQLite migrations (embedded) and client
+contract/              frozen daemon IPC contract: JSON Schema + golden fixtures
 packaging/             systemd units, .desktop file, .deb build
 docs/                  architecture, ADRs, adapter guide
 ```

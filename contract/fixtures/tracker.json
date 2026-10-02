@@ -1,0 +1,174 @@
+{
+  "scenario": "tracker",
+  "description": "Pausing and resuming tracking",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tracker.pause",
+        "params": {
+          "minutes": 15
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": true,
+            "resumeAt": 1790763300000,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "resumeAt": 1790763300000
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "paused": true,
+            "resumeAt": 1790763300000,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tracker.pause",
+        "params": {
+          "minutes": 60
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": true,
+            "resumeAt": 1790766000000,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "resumeAt": 1790766000000
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tracker.resume"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tracker.resume"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    }
+  ]
+}
