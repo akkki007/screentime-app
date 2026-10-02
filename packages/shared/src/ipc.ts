@@ -121,7 +121,12 @@ export const LimitSchema = z.object({
 export type Limit = z.infer<typeof LimitSchema>;
 
 export const TrackerPauseRequestSchema = z.object({
-  minutes: z.number().int().positive(),
+  /** At most a day, like focus mode: an unbounded value could pause tracking forever. */
+  minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 60),
 });
 export type TrackerPauseRequest = z.infer<typeof TrackerPauseRequestSchema>;
 

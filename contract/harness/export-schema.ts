@@ -10,6 +10,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   BrowserActiveTabSchema,
+  DEFAULT_CATEGORIES,
   IPC_VERSION,
   RpcMethods,
   RpcNotifications,
@@ -19,6 +20,8 @@ import { type ZodTypeAny, ZodVoid } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export const SCHEMA_PATH = join(import.meta.dir, '..', 'schema', 'rpc.schema.json');
+/** The built-in category rules, which the Go daemon's categories_test.go compares with its own. */
+export const CATEGORIES_PATH = join(import.meta.dir, '..', 'schema', 'categories.json');
 
 /** `null` means the method takes no params (omit `params`). */
 function toSchema(schema: ZodTypeAny): object | null {
@@ -60,7 +63,12 @@ export function renderSchema(): string {
   return `${JSON.stringify(buildSchema(), null, 2)}\n`;
 }
 
+export function renderCategories(): string {
+  return `${JSON.stringify(DEFAULT_CATEGORIES, null, 2)}\n`;
+}
+
 if (import.meta.main) {
   writeFileSync(SCHEMA_PATH, renderSchema());
-  console.log(`wrote ${SCHEMA_PATH}`);
+  writeFileSync(CATEGORIES_PATH, renderCategories());
+  console.log(`wrote ${SCHEMA_PATH} and ${CATEGORIES_PATH}`);
 }

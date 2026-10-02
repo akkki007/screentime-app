@@ -9,7 +9,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { RpcMethods, RpcNotifications } from '@screentime/shared';
 import { startDaemon } from './daemon';
-import { SCHEMA_PATH, renderSchema } from './export-schema';
+import { CATEGORIES_PATH, SCHEMA_PATH, renderCategories, renderSchema } from './export-schema';
 import { compare, loadFixtures } from './fixture';
 import { SCENARIOS } from './scenarios';
 
@@ -22,6 +22,7 @@ const NOT_IN_FIXTURES = new Set(['event.focus', 'event.limitHit', 'event.reminde
 describe('contract', () => {
   test('schema/rpc.schema.json is up to date (bun run --cwd contract schema)', () => {
     expect(readFileSync(SCHEMA_PATH, 'utf8')).toBe(renderSchema());
+    expect(readFileSync(CATEGORIES_PATH, 'utf8')).toBe(renderCategories());
   });
 
   test('every scenario has a fixture (bun run --cwd contract record)', () => {

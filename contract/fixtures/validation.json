@@ -341,27 +341,7 @@
       "send": {
         "jsonrpc": "2.0",
         "id": 17,
-        "method": "focus.start",
-        "params": {
-          "minutes": 0
-        }
-      },
-      "receive": [
-        {
-          "jsonrpc": "2.0",
-          "id": 17,
-          "error": {
-            "code": -32603,
-            "message": "minutes: Number must be greater than 0"
-          }
-        }
-      ]
-    },
-    {
-      "send": {
-        "jsonrpc": "2.0",
-        "id": 18,
-        "method": "focus.start",
+        "method": "tracker.pause",
         "params": {
           "minutes": 1441
         }
@@ -369,7 +349,7 @@
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 18,
+          "id": 17,
           "error": {
             "code": -32603,
             "message": "minutes: Number must be less than or equal to 1440"
@@ -380,7 +360,47 @@
     {
       "send": {
         "jsonrpc": "2.0",
+        "id": 18,
+        "method": "focus.start",
+        "params": {
+          "minutes": 0
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 18,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be greater than 0"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
         "id": 19,
+        "method": "focus.start",
+        "params": {
+          "minutes": 1441
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 19,
+          "error": {
+            "code": -32603,
+            "message": "minutes: Number must be less than or equal to 1440"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 20,
         "method": "data.export",
         "params": {
           "format": "xml"
@@ -389,7 +409,7 @@
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 19,
+          "id": 20,
           "error": {
             "code": -32603,
             "message": "format: Invalid enum value. Expected 'csv' | 'json', received 'xml'"
@@ -400,13 +420,13 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 20,
+        "id": 21,
         "method": "data.wipe"
       },
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 20,
+          "id": 21,
           "error": {
             "code": -32603,
             "message": "params: Required"
@@ -417,7 +437,7 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 21,
+        "id": 22,
         "method": "apps.setCategory",
         "params": {
           "appId": "code"
@@ -426,7 +446,7 @@
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 21,
+          "id": 22,
           "error": {
             "code": -32603,
             "message": "categoryId: Required"
@@ -437,14 +457,14 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 22,
+        "id": 23,
         "method": "limits.list",
         "params": {}
       },
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 22,
+          "id": 23,
           "error": {
             "code": -32603,
             "message": "params: Expected void, received object"
@@ -455,7 +475,7 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 23,
+        "id": 24,
         "method": "usage.web",
         "params": {
           "from": 1790706600000,
@@ -466,7 +486,7 @@
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 23,
+          "id": 24,
           "result": [
             {
               "key": "github.com",
@@ -483,13 +503,13 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 24,
+        "id": 25,
         "method": "limits.list"
       },
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 24,
+          "id": 25,
           "result": [
             {
               "id": 1,
@@ -520,13 +540,13 @@
     {
       "send": {
         "jsonrpc": "2.0",
-        "id": 25,
+        "id": 26,
         "method": "settings.get"
       },
       "receive": [
         {
           "jsonrpc": "2.0",
-          "id": 25,
+          "id": 26,
           "result": {
             "captureTitles": false,
             "idleThresholdMinutes": 5,

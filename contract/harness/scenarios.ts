@@ -119,6 +119,7 @@ export const SCENARIOS: Scenario[] = [
       call('settings.set', { noSuchSetting: true }),
       call('tracker.pause', { minutes: 0 }),
       call('tracker.pause', { minutes: -5 }),
+      call('tracker.pause', { minutes: 24 * 60 + 1 }),
       call('focus.start', { minutes: 0 }),
       call('focus.start', { minutes: 24 * 60 + 1 }),
       call('data.export', { format: 'xml' }),
