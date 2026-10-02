@@ -2,7 +2,7 @@
 
 Oct 2, 2026 · @Akshay
 
-**Status:** proposal. Nothing here is decided until it is written up as an ADR. These notes collect what a move from Bun/TypeScript to Go would involve, what it would fix, and the order to do it in so the app keeps working at every step.
+**Status:** accepted as [ADR 7](adr/0007-migrate-to-go.md). These notes cover what the move from Bun/TypeScript to Go involves, what it fixes, and the order to do it in so the app keeps working at every step.
 
 ## Why consider it
 
@@ -81,12 +81,13 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 
 | Step | Work | Exit criteria |
 | --- | --- | --- |
+| 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | Fixtures checked in and replayable |
-| 2. Go daemon | Port `time.ts`, `tracker.ts` and `rules.ts` first (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server | All fixtures pass against `screentimed` |
+| 2. Go daemon | Port `time.ts`, `tracker.ts` and `rules.ts` first (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed`; security requirements S1, S2, S6, S7, S8 met and tested |
 | 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
-| 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed |
+| 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
 | 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
-| 6. UI shell | Move the Svelte UI into a Wails app; rewrite the bridge; tray and reconnect logic in Go | Feature parity with the Electrobun app |
+| 6. UI shell | Move the Svelte UI into a Wails app; rewrite the bridge; tray and reconnect logic in Go | Feature parity with the Electrobun app; S4 and S5 met |
 | 7. New work | Planner, then Windows and macOS providers | Tracked separately |
 
 ### Porting notes
@@ -95,7 +96,22 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 - **Clock and runner injection.** The TypeScript code injects `now` and `Runner` for tests. Keep the same seams in Go as interfaces (`Clock`, a D-Bus connection interface) so suspend/resume and idle cases stay testable with a fake clock.
 - **GVariant parsing.** `gvariant.ts` exists only because of the `gdbus` text output, so it goes away once godbus decodes messages natively.
 - **Single instance.** Keep the refuse-to-start check if another daemon is already listening on the socket.
-- **Socket permissions.** Still `0600` under `$XDG_RUNTIME_DIR/screentime/`.
+- **Socket permissions.** Still `0600` under `$XDG_RUNTIME_DIR/screentime/`, now with the checks in S2.
+
+## Security requirements
+
+These come from the security review of the TypeScript code (issues #3–#7). Issues in code the migration replaces are **not** patched in TypeScript; they are fixed in the Go code, with a test for each, as part of the step named. If a release is cut before step 5, backport them to the Bun daemon first; each one is a few lines.
+
+| ID | Requirement | Where | Step | Issue |
+| --- | --- | --- | --- | --- |
+| S1 | Data directory created `0700` (and `chmod`ed if it already exists); the daemon runs with `umask 077` so `screentime.db`, `-wal` and `-shm` are `0600`; systemd unit sets `UMask=0077` | `internal/store`, `packaging/systemd` | 2 | #4 |
+| S2 | Before binding, `lstat` the socket directory and refuse to start unless it is a real directory owned by the current uid with no group/other bits. Create the socket under `umask 077` with no path-based `chmod`. Ignore an `XDG_RUNTIME_DIR` not owned by the user with mode `0700`, as GLib does | `internal/rpc` | 2 | #6 |
+| S3 | Clients (native host, UI shell) check that the socket and its directory are owned by the current uid before connecting | `internal/rpc` client helper, used by `cmd/screentimed native-host` and `cmd/screentime` | 4, 6 | #6 |
+| S4 | The UI shell attaches its daemon bridge only to the embedded frontend, never to a dev-server origin unless explicitly opted in (e.g. `SCREENTIME_DEV_SERVER=1`). Probing a port is not enough to trust it | `cmd/screentime` | 6 | #5 |
+| S5 | Exports are written `0600` with exclusive create (`O_EXCL`), and the filename is reduced to its base name | `cmd/screentime` | 6 | #4 |
+| S6 | Revise the extension's D-Bus interface: a `Subscribe()` method records the daemon's unique name, and `FocusChanged` is sent only to it, never broadcast. Titles are `''` until the daemon calls `SetCaptureTitles(true)`. `GetFocus` returns a title only to the subscriber. On the Go provider side: subscribe over a persistent godbus connection, send `SetCaptureTitles` when the setting changes, and check that each `FocusChanged` comes from the extension's unique name. Needs a persistent connection, which the `gdbus`-based Bun daemon doesn't have, so it isn't fixed before this step | `adapters/gnome-extension`, `internal/focus` | 2 | #3 |
+| S7 | Every RPC request is size-capped (as the TS server's 1 MB line cap is) and validated; numeric params have upper bounds (e.g. `tracker.pause.minutes`) | `internal/rpc` | 2 | — |
+| S8 | Go CI follows #7: `permissions: contents: read`, actions pinned to SHAs, Go version taken from `go.mod`; add `govulncheck` | `.github/workflows` | 2 | #7 |
 
 ## Risks
 
@@ -116,4 +132,4 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 
 ## Next step
 
-If the direction is accepted, record it as **ADR 7: Migrate the daemon to Go** and start step 1.
+Step 0: fix #7, then the UI issues (#10 has a community PR, #11). Then start step 1. The open questions above should be settled before the step that needs them: Go version and type generation before step 2, Wails v2 or v3 before step 6.
