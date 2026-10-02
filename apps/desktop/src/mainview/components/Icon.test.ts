@@ -14,4 +14,3 @@ test('LimitsView renders globe icon for domain limits', () => {
   const content = readFileSync(limitsViewPath, 'utf8');
   expect(content).toContain('limit.targetType === "category" ? "apps" : "globe"');
 });
-
