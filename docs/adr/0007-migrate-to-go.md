@@ -28,7 +28,7 @@ These stay as they are, because their platforms require their languages: the GNO
 These contracts stay fixed, which is what makes an incremental swap possible:
 - JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/screentime/daemon.sock`, with the same method names and payloads.
 - The SQLite schema and migrations, tracked with `PRAGMA user_version`.
-- The D-Bus interface between the GNOME extension and the daemon (as revised for #3).
+- The D-Bus interface between the GNOME extension and the daemon, apart from the revision for #3, which lands together with the Go GNOME provider.
 - ADR 3, ADR 4 and ADR 5.
 
 The migration follows the steps in `docs/migration-to-go.md`. The Bun daemon stays until the Go daemon passes golden fixtures recorded from it.
@@ -36,6 +36,6 @@ The migration follows the steps in `docs/migration-to-go.md`. The Bun daemon sta
 ## Consequences
 
 - Known security issues in code that Go replaces are fixed in the Go code, not patched in TypeScript. They become acceptance criteria for the matching migration step (see "Security requirements" in the migration notes). If a release is cut before the Bun daemon is removed, those fixes are backported first.
-- Fixes to code that survives the migration (the GNOME extension, CI, the Svelte UI) land now.
+- Fixes to code that survives the migration (CI, the Svelte UI) land now. The GNOME extension fix (#3) waits for the Go provider, because it needs a persistent D-Bus connection on the daemon side.
 - Contributors need Go for the core and TypeScript for the frontend and the extensions.
 - macOS focus needs cgo, so macOS builds run on a macOS CI runner.

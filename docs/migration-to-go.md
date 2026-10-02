@@ -81,9 +81,9 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 
 | Step | Work | Exit criteria |
 | --- | --- | --- |
-| 0. Fix what survives | Fix the issues in code the migration keeps: GNOME extension D-Bus interface (#3), CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed; the revised D-Bus interface is part of the contract frozen in step 1 |
+| 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | Fixtures checked in and replayable |
-| 2. Go daemon | Port `time.ts`, `tracker.ts` and `rules.ts` first (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server | All fixtures pass against `screentimed`; security requirements S1–S3 met and tested |
+| 2. Go daemon | Port `time.ts`, `tracker.ts` and `rules.ts` first (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed`; security requirements S1, S2, S6, S7, S8 met and tested |
 | 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
 | 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
 | 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
@@ -109,7 +109,7 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 | S3 | Clients (native host, UI shell) check that the socket and its directory are owned by the current uid before connecting | `internal/rpc` client helper, used by `cmd/screentimed native-host` and `cmd/screentime` | 4, 6 | #6 |
 | S4 | The UI shell attaches its daemon bridge only to the embedded frontend, never to a dev-server origin unless explicitly opted in (e.g. `SCREENTIME_DEV_SERVER=1`). Probing a port is not enough to trust it | `cmd/screentime` | 6 | #5 |
 | S5 | Exports are written `0600` with exclusive create (`O_EXCL`), and the filename is reduced to its base name | `cmd/screentime` | 6 | #4 |
-| S6 | The Go GNOME provider uses the revised extension interface from #3: it subscribes so signals are sent only to it, sends `SetCaptureTitles` when the setting changes, and checks the sender of each `FocusChanged` against the extension's unique name | `internal/focus` | 2 | #3 |
+| S6 | Revise the extension's D-Bus interface: a `Subscribe()` method records the daemon's unique name, and `FocusChanged` is sent only to it, never broadcast. Titles are `''` until the daemon calls `SetCaptureTitles(true)`. `GetFocus` returns a title only to the subscriber. On the Go provider side: subscribe over a persistent godbus connection, send `SetCaptureTitles` when the setting changes, and check that each `FocusChanged` comes from the extension's unique name. Needs a persistent connection, which the `gdbus`-based Bun daemon doesn't have, so it isn't fixed before this step | `adapters/gnome-extension`, `internal/focus` | 2 | #3 |
 | S7 | Every RPC request is size-capped (as the TS server's 1 MB line cap is) and validated; numeric params have upper bounds (e.g. `tracker.pause.minutes`) | `internal/rpc` | 2 | — |
 | S8 | Go CI follows #7: `permissions: contents: read`, actions pinned to SHAs, Go version taken from `go.mod`; add `govulncheck` | `.github/workflows` | 2 | #7 |
 
@@ -132,4 +132,4 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 
 ## Next step
 
-Step 0: fix #3 and #7, then the UI issues (#10 has a community PR, #11). Then start step 1. The open questions above should be settled before the step that needs them: Go version and type generation before step 2, Wails v2 or v3 before step 6.
+Step 0: fix #7, then the UI issues (#10 has a community PR, #11). Then start step 1. The open questions above should be settled before the step that needs them: Go version and type generation before step 2, Wails v2 or v3 before step 6.
