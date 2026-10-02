@@ -49,8 +49,11 @@ A scenario must finish within 4 s, because the rules engine first ticks after 5 
 The harness spawns `CONTRACT_DAEMON_CMD` (space-separated) instead of the Bun daemon:
 
 ```bash
-CONTRACT_DAEMON_CMD="./bin/screentimed" CONTRACT_LOOSE_MESSAGES=1 bun test contract
+go build -o bin/screentimed ./cmd/screentimed
+CONTRACT_DAEMON_CMD="$PWD/bin/screentimed" CONTRACT_LOOSE_MESSAGES=1 bun test contract
 ```
+
+CI runs exactly this for the Go daemon (`contract-go` job).
 
 The implementation must:
 

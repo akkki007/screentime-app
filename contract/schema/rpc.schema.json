@@ -451,7 +451,8 @@
         "properties": {
           "minutes": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "exclusiveMinimum": 0,
+            "maximum": 1440
           }
         },
         "required": [
