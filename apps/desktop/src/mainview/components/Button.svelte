@@ -31,7 +31,7 @@ const styles = {
 	{title}
 	{disabled}
 	{onclick}
-	class="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 {styles[variant]}"
+	class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 {styles[variant]}"
 >
 	{@render children()}
 </button>
