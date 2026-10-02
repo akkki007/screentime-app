@@ -46,7 +46,7 @@ export function usageSummary(db: Database, req: UsageSummaryRequest): UsageSumma
        WHERE end_ts > :from AND start_ts < :to
        GROUP BY key
        HAVING ms > 0
-       ORDER BY ms DESC`,
+       ORDER BY ms DESC, key`,
     )
     .all({ ':from': from, ':to': to }) as UsageSummaryRow[];
 }
@@ -100,7 +100,7 @@ export function usageWeb(db: Database, from: number, to: number): UsageSummaryRo
        WHERE end_ts > :from AND start_ts < :to
        GROUP BY domain
        HAVING ms > 0
-       ORDER BY ms DESC`,
+       ORDER BY ms DESC, key`,
     )
     .all({ ':from': from, ':to': to }) as UsageSummaryRow[];
 }
@@ -115,7 +115,7 @@ export function timeline(db: Database, date: string): Session[] {
       `SELECT sessions.id, apps.app_id, sessions.title, sessions.start_ts, sessions.end_ts, sessions.source
        FROM sessions JOIN apps ON apps.id = sessions.app_id
        WHERE end_ts > ? AND start_ts < ?
-       ORDER BY start_ts`,
+       ORDER BY start_ts, sessions.id`,
     )
     .all(from, to) as SessionRow[];
 
@@ -160,7 +160,9 @@ export function usageFor(
 
 export function listApps(db: Database): AppInfo[] {
   const rows = db
-    .query('SELECT app_id, name, icon, category_id FROM apps ORDER BY COALESCE(name, app_id)')
+    .query(
+      'SELECT app_id, name, icon, category_id FROM apps ORDER BY COALESCE(name, app_id), app_id',
+    )
     .all() as {
     app_id: string;
     name: string | null;
@@ -266,15 +268,16 @@ export function exportData(
     .query(
       `SELECT apps.app_id AS target, sessions.start_ts, sessions.end_ts
        FROM sessions JOIN apps ON apps.id = sessions.app_id
-       WHERE end_ts > ? AND start_ts < ? ORDER BY start_ts`,
+       WHERE end_ts > ? AND start_ts < ? ORDER BY start_ts, sessions.id`,
     )
     .all(from, to) as { target: string; start_ts: number; end_ts: number }[];
   const web = db
     .query(
-      'SELECT domain AS target, start_ts, end_ts FROM web_sessions WHERE end_ts > ? AND start_ts < ? ORDER BY start_ts',
+      'SELECT domain AS target, start_ts, end_ts FROM web_sessions WHERE end_ts > ? AND start_ts < ? ORDER BY start_ts, id',
     )
     .all(from, to) as { target: string; start_ts: number; end_ts: number }[];
 
+  // By start time; the sort is stable, so on a tie desktop rows come before web ones.
   const rows = [
     ...desktop.map((r) => ({ source: 'desktop', ...r })),
     ...web.map((r) => ({ source: 'web', ...r })),
