@@ -1,0 +1,23 @@
+{
+  "name": "@screentime/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The daemon's frozen IPC contract: JSON Schema and golden request/response fixtures",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "schema": "bun run harness/export-schema.ts",
+    "record": "bun run harness/record.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@screentime/db": "workspace:*",
+    "@screentime/shared": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "zod-to-json-schema": "^3.25.2"
+  }
+}

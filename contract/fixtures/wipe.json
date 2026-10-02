@@ -1,0 +1,317 @@
+{
+  "scenario": "wipe",
+  "description": "Deleting history, then everything",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "data.wipe",
+        "params": {}
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "usage.summary",
+        "params": {
+          "from": 1790188200000,
+          "to": 1790762400000,
+          "groupBy": "app"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "usage.web",
+        "params": {
+          "from": 1790188200000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "limits.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": [
+            {
+              "id": 1,
+              "targetType": "app",
+              "target": "com.spotify.Client",
+              "dailyMs": 1800000,
+              "action": "notify"
+            },
+            {
+              "id": 2,
+              "targetType": "category",
+              "target": "Entertainment",
+              "dailyMs": 3600000,
+              "schedule": "09:00-18:00",
+              "action": "overlay"
+            },
+            {
+              "id": 3,
+              "targetType": "domain",
+              "target": "youtube.com",
+              "dailyMs": 2700000,
+              "action": "notify"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "settings.get"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "captureTitles": false,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "apps.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": [
+            {
+              "appId": "org.gnome.Nautilus",
+              "name": "Files",
+              "icon": null,
+              "categoryId": 2
+            },
+            {
+              "appId": "org.mozilla.firefox",
+              "name": "Firefox",
+              "icon": "firefox",
+              "categoryId": 6
+            },
+            {
+              "appId": "com.spotify.Client",
+              "name": "Spotify",
+              "icon": null,
+              "categoryId": 5
+            },
+            {
+              "appId": "org.telegram.desktop",
+              "name": "Telegram",
+              "icon": null,
+              "categoryId": 3
+            },
+            {
+              "appId": "org.gnome.Ptyxis",
+              "name": "Terminal",
+              "icon": null,
+              "categoryId": 1
+            },
+            {
+              "appId": "com.example.Unknown",
+              "name": "Unknown Tool",
+              "icon": null,
+              "categoryId": null
+            },
+            {
+              "appId": "code",
+              "name": "Visual Studio Code",
+              "icon": "vscode",
+              "categoryId": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "data.wipe",
+        "params": {
+          "everything": true
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "limits.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 8,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "settings.get"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 9,
+          "result": {
+            "captureTitles": false,
+            "idleThresholdMinutes": 3,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": false
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "apps.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 10,
+          "result": []
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "categories.list"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 11,
+          "result": [
+            {
+              "id": 1,
+              "name": "Development",
+              "color": "#4f8cff",
+              "productive": 1
+            },
+            {
+              "id": 2,
+              "name": "Productivity",
+              "color": "#34c38f",
+              "productive": 1
+            },
+            {
+              "id": 3,
+              "name": "Communication",
+              "color": "#a78bfa",
+              "productive": null
+            },
+            {
+              "id": 4,
+              "name": "Social",
+              "color": "#f472b6",
+              "productive": 0
+            },
+            {
+              "id": 5,
+              "name": "Entertainment",
+              "color": "#fb923c",
+              "productive": 0
+            },
+            {
+              "id": 6,
+              "name": "Browsing",
+              "color": "#facc15",
+              "productive": null
+            },
+            {
+              "id": 7,
+              "name": "Utilities",
+              "color": "#94a3b8",
+              "productive": null
+            },
+            {
+              "id": 8,
+              "name": "Other",
+              "color": "#64748b",
+              "productive": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

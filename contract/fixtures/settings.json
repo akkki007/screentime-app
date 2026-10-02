@@ -1,0 +1,117 @@
+{
+  "scenario": "settings",
+  "description": "Partial updates return the full settings",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "settings.set",
+        "params": {
+          "captureTitles": true
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "settings.set",
+        "params": {
+          "breakRemindersEnabled": true,
+          "breakEveryMinutes": 25,
+          "downtimeStart": "23:15",
+          "downtimeEnd": "06:45"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": true,
+            "breakEveryMinutes": 25,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "23:15",
+            "downtimeEnd": "06:45",
+            "onboardingDone": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "settings.set",
+        "params": {}
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": true,
+            "breakEveryMinutes": 25,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "23:15",
+            "downtimeEnd": "06:45",
+            "onboardingDone": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "settings.get"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": true,
+            "breakEveryMinutes": 25,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "23:15",
+            "downtimeEnd": "06:45",
+            "onboardingDone": true
+          }
+        }
+      ]
+    }
+  ]
+}

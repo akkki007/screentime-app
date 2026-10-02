@@ -1,0 +1,146 @@
+{
+  "scenario": "protocol",
+  "description": "Version handshake, unknown methods and malformed input",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "version",
+        "params": {
+          "major": 1
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "major": 1
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "version",
+        "params": {
+          "major": 2
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "error": {
+            "code": -32000,
+            "message": "unsupported major version 2"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "version"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "error": {
+            "code": -32000,
+            "message": "unsupported major version undefined"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "no.such.method"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "error": {
+            "code": -32601,
+            "message": "method not found: no.such.method"
+          }
+        }
+      ]
+    },
+    {
+      "send": "this is not json",
+      "receive": []
+    },
+    {
+      "send": "[1, 2, 3]",
+      "receive": []
+    },
+    {
+      "send": "{\"jsonrpc\":\"2.0\",\"id\":99}",
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "method": "tracker.status"
+      },
+      "receive": []
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": "abc",
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": "abc",
+          "result": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "version",
+        "params": {
+          "major": 1
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "major": 1
+          }
+        }
+      ]
+    }
+  ]
+}

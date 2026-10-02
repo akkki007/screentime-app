@@ -1,0 +1,975 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Screentime daemon IPC contract",
+  "description": "JSON-RPC 2.0, one JSON message per line, over $XDG_RUNTIME_DIR/screentime/daemon.sock. Generated from packages/shared/src/ipc.ts by contract/harness/export-schema.ts; do not edit.",
+  "ipcVersion": 1,
+  "methods": {
+    "version": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "major": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "major"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "major": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "major"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "usage.summary": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "integer"
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "category",
+              "hour",
+              "day"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "groupBy"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "ms": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "key",
+            "ms"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "usage.timeline": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "appId": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "startTs": {
+              "type": "integer"
+            },
+            "endTs": {
+              "type": "integer"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "desktop",
+                "browser"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "appId",
+            "startTs",
+            "endTs",
+            "source"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "limits.list": {
+      "params": null,
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "targetType": {
+              "type": "string",
+              "enum": [
+                "app",
+                "category",
+                "domain"
+              ]
+            },
+            "target": {
+              "type": "string"
+            },
+            "dailyMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "schedule": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "notify",
+                "overlay",
+                "block"
+              ]
+            }
+          },
+          "required": [
+            "targetType",
+            "target",
+            "dailyMs",
+            "action"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "limits.set": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "app",
+              "category",
+              "domain"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "dailyMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "schedule": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "notify",
+              "overlay",
+              "block"
+            ]
+          }
+        },
+        "required": [
+          "targetType",
+          "target",
+          "dailyMs",
+          "action"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "app",
+              "category",
+              "domain"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "dailyMs": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "schedule": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "notify",
+              "overlay",
+              "block"
+            ]
+          }
+        },
+        "required": [
+          "targetType",
+          "target",
+          "dailyMs",
+          "action"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "limits.delete": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "settings.get": {
+      "params": null,
+      "result": {
+        "type": "object",
+        "properties": {
+          "captureTitles": {
+            "type": "boolean",
+            "default": false
+          },
+          "idleThresholdMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 3
+          },
+          "breakRemindersEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "breakEveryMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 240,
+            "default": 50
+          },
+          "breakLengthMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
+          },
+          "downtimeEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "downtimeStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "22:00"
+          },
+          "downtimeEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "07:00"
+          },
+          "onboardingDone": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "settings.set": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "captureTitles": {
+            "type": "boolean",
+            "default": false
+          },
+          "idleThresholdMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 3
+          },
+          "breakRemindersEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "breakEveryMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 240,
+            "default": 50
+          },
+          "breakLengthMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
+          },
+          "downtimeEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "downtimeStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "22:00"
+          },
+          "downtimeEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "07:00"
+          },
+          "onboardingDone": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "captureTitles": {
+            "type": "boolean",
+            "default": false
+          },
+          "idleThresholdMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 3
+          },
+          "breakRemindersEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "breakEveryMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 240,
+            "default": 50
+          },
+          "breakLengthMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
+          },
+          "downtimeEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "downtimeStart": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "22:00"
+          },
+          "downtimeEnd": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "default": "07:00"
+          },
+          "onboardingDone": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "tracker.pause": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "minutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "minutes"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "resumeAt": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resumeAt"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "tracker.resume": {
+      "params": null,
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "tracker.status": {
+      "params": null,
+      "result": {
+        "type": "object",
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          },
+          "resumeAt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "idle": {
+            "type": "boolean"
+          },
+          "currentAppId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "focusMode": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "until": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "active",
+              "until"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "paused",
+          "resumeAt",
+          "idle",
+          "currentAppId",
+          "since",
+          "focusMode"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "usage.web": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "ms": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "key",
+            "ms"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "apps.list": {
+      "params": null,
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "appId": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "categoryId": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "appId",
+            "name",
+            "icon",
+            "categoryId"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "apps.setCategory": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "appId",
+          "categoryId"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "categories.list": {
+      "params": null,
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "color": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "productive": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "color",
+            "productive"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "focus.start": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "minutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "minutes"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "until": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "until"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "focus.stop": {
+      "params": null,
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "data.export": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "json"
+            ]
+          },
+          "from": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "format"
+        ],
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "content"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "data.wipe": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "everything": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": true
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "notifications": {
+    "event.focus": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "appId",
+        "since"
+      ],
+      "additionalProperties": true
+    },
+    "event.limitHit": {
+      "type": "object",
+      "properties": {
+        "limitId": {
+          "type": "integer"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "notify",
+            "overlay",
+            "block"
+          ]
+        }
+      },
+      "required": [
+        "limitId",
+        "action"
+      ],
+      "additionalProperties": true
+    },
+    "event.reminder": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "break",
+            "downtime",
+            "focus"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "event.status": {
+      "type": "object",
+      "properties": {
+        "paused": {
+          "type": "boolean"
+        },
+        "resumeAt": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "idle": {
+          "type": "boolean"
+        },
+        "currentAppId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "focusMode": {
+          "type": "object",
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "until": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "active",
+            "until"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "paused",
+        "resumeAt",
+        "idle",
+        "currentAppId",
+        "since",
+        "focusMode"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "clientNotifications": {
+    "browser.activeTab": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "maxLength": 253
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "active"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

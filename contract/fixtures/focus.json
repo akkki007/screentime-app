@@ -1,0 +1,189 @@
+{
+  "scenario": "focus",
+  "description": "Focus mode",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "focus.start",
+        "params": {
+          "minutes": 25
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1790763900000
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "until": 1790763900000
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1790763900000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "focus.start",
+        "params": {
+          "minutes": 1440
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1790848800000
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "until": 1790848800000
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "focus.stop"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tracker.status"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "focus.stop"
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "method": "event.status",
+          "params": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": {
+            "ok": true
+          }
+        }
+      ]
+    }
+  ]
+}

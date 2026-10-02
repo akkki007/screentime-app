@@ -1,0 +1,95 @@
+{
+  "scenario": "export",
+  "description": "CSV and JSON export",
+  "env": {
+    "now": 1790762400000,
+    "tz": "Asia/Kolkata",
+    "seed": "seed.sql"
+  },
+  "exchanges": [
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "data.export",
+        "params": {
+          "format": "csv"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "filename": "screentime-2026-09-30.csv",
+            "content": "source,target,start,end,duration_ms\ndesktop,code,2026-09-22T04:30:00.000Z,2026-09-22T05:30:00.000Z,3600000\ndesktop,code,2026-09-27T04:30:00.000Z,2026-09-27T06:30:00.000Z,7200000\ndesktop,code,2026-09-29T03:30:00.000Z,2026-09-29T06:00:00.000Z,9000000\ndesktop,org.mozilla.firefox,2026-09-29T06:00:00.000Z,2026-09-29T06:45:00.000Z,2700000\nweb,youtube.com,2026-09-29T06:00:00.000Z,2026-09-29T06:45:00.000Z,2700000\ndesktop,com.spotify.Client,2026-09-29T18:00:00.000Z,2026-09-29T19:15:00.000Z,4500000\ndesktop,org.gnome.Ptyxis,2026-09-30T02:30:00.000Z,2026-09-30T02:50:00.000Z,1200000\ndesktop,code,2026-09-30T03:30:00.000Z,2026-09-30T05:00:00.000Z,5400000\ndesktop,org.mozilla.firefox,2026-09-30T05:00:00.000Z,2026-09-30T05:30:00.000Z,1800000\nweb,github.com,2026-09-30T05:00:00.000Z,2026-09-30T05:20:00.000Z,1200000\nweb,youtube.com,2026-09-30T05:20:00.000Z,2026-09-30T05:30:00.000Z,600000\ndesktop,org.telegram.desktop,2026-09-30T05:30:00.000Z,2026-09-30T05:40:00.000Z,600000\ndesktop,com.example.Unknown,2026-09-30T06:30:00.000Z,2026-09-30T06:35:00.000Z,300000\ndesktop,org.gnome.Nautilus,2026-09-30T07:30:00.000Z,2026-09-30T08:00:00.000Z,1800000\ndesktop,code,2026-09-30T08:30:00.000Z,2026-09-30T09:50:00.000Z,4800000\n"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "data.export",
+        "params": {
+          "format": "json"
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "filename": "screentime-2026-09-30.json",
+            "content": "[\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-22T04:30:00.000Z\",\n    \"end\": \"2026-09-22T05:30:00.000Z\",\n    \"durationMs\": 3600000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-27T04:30:00.000Z\",\n    \"end\": \"2026-09-27T06:30:00.000Z\",\n    \"durationMs\": 7200000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-29T03:30:00.000Z\",\n    \"end\": \"2026-09-29T06:00:00.000Z\",\n    \"durationMs\": 9000000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.mozilla.firefox\",\n    \"start\": \"2026-09-29T06:00:00.000Z\",\n    \"end\": \"2026-09-29T06:45:00.000Z\",\n    \"durationMs\": 2700000\n  },\n  {\n    \"source\": \"web\",\n    \"target\": \"youtube.com\",\n    \"start\": \"2026-09-29T06:00:00.000Z\",\n    \"end\": \"2026-09-29T06:45:00.000Z\",\n    \"durationMs\": 2700000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"com.spotify.Client\",\n    \"start\": \"2026-09-29T18:00:00.000Z\",\n    \"end\": \"2026-09-29T19:15:00.000Z\",\n    \"durationMs\": 4500000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.gnome.Ptyxis\",\n    \"start\": \"2026-09-30T02:30:00.000Z\",\n    \"end\": \"2026-09-30T02:50:00.000Z\",\n    \"durationMs\": 1200000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-30T03:30:00.000Z\",\n    \"end\": \"2026-09-30T05:00:00.000Z\",\n    \"durationMs\": 5400000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.mozilla.firefox\",\n    \"start\": \"2026-09-30T05:00:00.000Z\",\n    \"end\": \"2026-09-30T05:30:00.000Z\",\n    \"durationMs\": 1800000\n  },\n  {\n    \"source\": \"web\",\n    \"target\": \"github.com\",\n    \"start\": \"2026-09-30T05:00:00.000Z\",\n    \"end\": \"2026-09-30T05:20:00.000Z\",\n    \"durationMs\": 1200000\n  },\n  {\n    \"source\": \"web\",\n    \"target\": \"youtube.com\",\n    \"start\": \"2026-09-30T05:20:00.000Z\",\n    \"end\": \"2026-09-30T05:30:00.000Z\",\n    \"durationMs\": 600000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.telegram.desktop\",\n    \"start\": \"2026-09-30T05:30:00.000Z\",\n    \"end\": \"2026-09-30T05:40:00.000Z\",\n    \"durationMs\": 600000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"com.example.Unknown\",\n    \"start\": \"2026-09-30T06:30:00.000Z\",\n    \"end\": \"2026-09-30T06:35:00.000Z\",\n    \"durationMs\": 300000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.gnome.Nautilus\",\n    \"start\": \"2026-09-30T07:30:00.000Z\",\n    \"end\": \"2026-09-30T08:00:00.000Z\",\n    \"durationMs\": 1800000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-30T08:30:00.000Z\",\n    \"end\": \"2026-09-30T09:50:00.000Z\",\n    \"durationMs\": 4800000\n  }\n]"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "data.export",
+        "params": {
+          "format": "json",
+          "from": 1790706600000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "filename": "screentime-2026-09-30.json",
+            "content": "[\n  {\n    \"source\": \"desktop\",\n    \"target\": \"com.spotify.Client\",\n    \"start\": \"2026-09-29T18:00:00.000Z\",\n    \"end\": \"2026-09-29T19:15:00.000Z\",\n    \"durationMs\": 4500000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.gnome.Ptyxis\",\n    \"start\": \"2026-09-30T02:30:00.000Z\",\n    \"end\": \"2026-09-30T02:50:00.000Z\",\n    \"durationMs\": 1200000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-30T03:30:00.000Z\",\n    \"end\": \"2026-09-30T05:00:00.000Z\",\n    \"durationMs\": 5400000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.mozilla.firefox\",\n    \"start\": \"2026-09-30T05:00:00.000Z\",\n    \"end\": \"2026-09-30T05:30:00.000Z\",\n    \"durationMs\": 1800000\n  },\n  {\n    \"source\": \"web\",\n    \"target\": \"github.com\",\n    \"start\": \"2026-09-30T05:00:00.000Z\",\n    \"end\": \"2026-09-30T05:20:00.000Z\",\n    \"durationMs\": 1200000\n  },\n  {\n    \"source\": \"web\",\n    \"target\": \"youtube.com\",\n    \"start\": \"2026-09-30T05:20:00.000Z\",\n    \"end\": \"2026-09-30T05:30:00.000Z\",\n    \"durationMs\": 600000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.telegram.desktop\",\n    \"start\": \"2026-09-30T05:30:00.000Z\",\n    \"end\": \"2026-09-30T05:40:00.000Z\",\n    \"durationMs\": 600000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"com.example.Unknown\",\n    \"start\": \"2026-09-30T06:30:00.000Z\",\n    \"end\": \"2026-09-30T06:35:00.000Z\",\n    \"durationMs\": 300000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"org.gnome.Nautilus\",\n    \"start\": \"2026-09-30T07:30:00.000Z\",\n    \"end\": \"2026-09-30T08:00:00.000Z\",\n    \"durationMs\": 1800000\n  },\n  {\n    \"source\": \"desktop\",\n    \"target\": \"code\",\n    \"start\": \"2026-09-30T08:30:00.000Z\",\n    \"end\": \"2026-09-30T09:50:00.000Z\",\n    \"durationMs\": 4800000\n  }\n]"
+          }
+        }
+      ]
+    },
+    {
+      "send": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "data.export",
+        "params": {
+          "format": "csv",
+          "from": 1790762400000,
+          "to": 1790762400000
+        }
+      },
+      "receive": [
+        {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "filename": "screentime-2026-09-30.csv",
+            "content": "source,target,start,end,duration_ms\n"
+          }
+        }
+      ]
+    }
+  ]
+}
