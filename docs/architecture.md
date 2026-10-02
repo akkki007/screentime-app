@@ -177,6 +177,8 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 
 ## Roadmap
 
+> The daemon, native host and UI shell are moving to Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)). This document describes the current Bun/TypeScript implementation until each part is replaced.
+
 A phase starts only after the previous phase meets its exit criteria. **Status** is what has actually been verified, not just written.
 
 | Phase | Scope | Exit criteria | Status |
