@@ -83,7 +83,7 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 | --- | --- | --- |
 | 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | **Done:** [`contract/`](../contract/README.md). Fixtures checked in and replayable against any daemon via `CONTRACT_DAEMON_CMD` |
-| 2. Go daemon (**in progress**) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't) (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed`; security requirements S1, S2, S6, S7, S8 met and tested |
+| 2. Go daemon (**in progress**: core done, desktop adapters next) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed` (**done**, in CI, even with exact error messages); security requirements S1, S2, S6, S7, S8 met and tested (S1, S2, S7, S8 **done**; S6 with the GNOME provider) |
 | 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
 | 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
 | 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
@@ -98,6 +98,12 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 - **GVariant parsing.** `gvariant.ts` exists only because of the `gdbus` text output, so it goes away once godbus decodes messages natively.
 - **Single instance.** Keep the refuse-to-start check if another daemon is already listening on the socket.
 - **Socket permissions.** Still `0600` under `$XDG_RUNTIME_DIR/screentime/`, now with the checks in S2.
+
+### Status after step 2b
+
+`cmd/screentimed` runs with `SCREENTIME_FOCUS_PROVIDER=none` and passes every contract fixture. The tracker, web tracker, rules, queries, settings and app tests are all ported. Still to do in step 2: the GNOME (godbus) and X11 (xgb) providers and the D-Bus notifier.
+
+First memory reading (12 s idle, `none` provider, same sandbox): `screentimed` **10 MB** RSS against **63 MB** for the Bun daemon run from source. The stripped binary is 7.8 MB. The proper measurement on a real session is still step 3's.
 
 ## Security requirements
 
