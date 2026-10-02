@@ -92,7 +92,7 @@ const needsOnboarding = $derived(
 					</div>
 				</div>
 			{/if}
-			<div class="mx-auto max-w-6xl px-8 pt-6 pb-10">
+			<div class="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-8">
 				{#if store.connected || store.view === "settings"}
 					<View />
 				{:else}

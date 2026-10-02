@@ -9,6 +9,8 @@
     linear-gradient(160deg, #fdf3e3 0%, #f8e4d8 100%);
   --surface: rgb(255 255 255 / 0.62);
   --surface-2: rgb(255 255 255 / 0.55);
+  /* Opaque, for dialogs: glass would let the page show through their fields. */
+  --surface-raised: #fffaf4;
   --line: rgb(60 30 10 / 0.08);
   --text: #1a130d;
   --muted: #8a7a6e;
@@ -31,6 +33,7 @@
     linear-gradient(160deg, #1b1511 0%, #120e0b 100%);
   --surface: rgb(255 255 255 / 0.06);
   --surface-2: rgb(255 255 255 / 0.07);
+  --surface-raised: #261d17;
   --line: rgb(255 255 255 / 0.09);
   --text: #f5ece4;
   --muted: #a39384;
@@ -51,6 +54,7 @@
       linear-gradient(160deg, #1b1511 0%, #120e0b 100%);
     --surface: rgb(255 255 255 / 0.06);
     --surface-2: rgb(255 255 255 / 0.07);
+    --surface-raised: #261d17;
     --line: rgb(255 255 255 / 0.09);
     --text: #f5ece4;
     --muted: #a39384;
@@ -68,6 +72,7 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-raised: var(--surface-raised);
   --color-line: var(--line);
   --color-ink: var(--text);
   --color-muted: var(--muted);
