@@ -83,7 +83,7 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 | --- | --- | --- |
 | 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | **Done:** [`contract/`](../contract/README.md). Fixtures checked in and replayable against any daemon via `CONTRACT_DAEMON_CMD` |
-| 2. Go daemon | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't) (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed`; security requirements S1, S2, S6, S7, S8 met and tested |
+| 2. Go daemon (**in progress**) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't) (pure logic, tests port as table-driven tests); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed`; security requirements S1, S2, S6, S7, S8 met and tested |
 | 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
 | 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
 | 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
@@ -92,6 +92,7 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 
 ### Porting notes
 
+- **Migrations.** `packages/db/migrations/embed.go` embeds the same `.sql` files for Go (`go:embed` can't reach outside its package directory). They move into `internal/store` when `packages/db` is deleted in step 5.
 - **Time.** Keep Unix ms UTC (`int64`) everywhere. Port `time.ts` with its tests first, because the tracker and rules depend on it.
 - **Clock and runner injection.** The TypeScript code injects `now` and `Runner` for tests. Keep the same seams in Go as interfaces (`Clock`, a D-Bus connection interface) so suspend/resume and idle cases stay testable with a fake clock.
 - **GVariant parsing.** `gvariant.ts` exists only because of the `gdbus` text output, so it goes away once godbus decodes messages natively.
@@ -126,9 +127,9 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 ## Open questions
 
 - [ ] Wails v2 or v3, depending on v3's status when step 6 starts
-- [ ] Generate Go types from `contract/schema/rpc.schema.json`, or write them by hand and rely on the fixtures?
+- [x] ~~Generate Go types from `contract/schema/rpc.schema.json`, or write them by hand?~~ By hand: the contract fixtures check every field, and generated code from Zod's JSON Schema is awkward Go.
 - [ ] Should `architecture.md` and ADR 2 be updated in the same PR as the decision, or once the Go daemon reaches parity?
-- [ ] Minimum Go version (matters for `go:embed`, generics and `slog`)
+- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.1` pinned in `go.mod`. CI reads both from there.
 
 ## Next step
 

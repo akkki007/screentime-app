@@ -37,3 +37,6 @@ coverage/
 .cottontail-tmp/
 .hutch/
 artifacts/
+
+# Go
+/bin/
