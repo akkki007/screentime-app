@@ -23,9 +23,15 @@ GNOME marks the extension *inactive* while the screen is locked. That is expecte
 
 Owns the name `io.github.akkki007.screentime` and exports `/io/github/akkki007/screentime/Focus` with interface `io.github.akkki007.screentime.Focus`:
 
-- signal `FocusChanged(s appId, s title, u pid)` whenever the focused window changes;
-- method `GetFocus() -> (s appId, s title, u pid)` returning the current window (empty `appId` if none), so a daemon that starts later can catch up.
+- method `Subscribe()`: the caller becomes the one client that receives `FocusChanged`. A second client gets `org.freedesktop.DBus.Error.AccessDenied` until the first leaves the bus.
+- method `SetCaptureTitles(b capture)`: subscriber only. Titles are sent as `''` until it is `true`; the daemon passes the user's "Record window titles" setting.
+- signal `FocusChanged(s appId, s title, u pid)`: sent to the subscriber alone (a unicast signal), whenever the focused window changes.
+- method `GetFocus() -> (s appId, s title, u pid)`: the current window, for a daemon that starts later. Anyone but the subscriber gets `('', '', 0)`.
 
 `appId` is the `.desktop` file ID, falling back to `WM_CLASS` for windows with no desktop entry.
 
-Window titles are emitted here, but the daemon discards them unless the user has opted in — treat `title` as always-present-but-usually-discarded, not privacy-safe by itself.
+### Privacy
+
+On Wayland, apps can't normally see each other's window titles, and titles often hold document names, chat contacts and page titles. So nothing goes on the bus for other processes to read, and titles don't leave the Shell unless the user opted in (issue #3; `docs/migration-to-go.md`, S6).
+
+**Legacy mode:** the Bun daemon talks to D-Bus through `gdbus monitor`, which can't subscribe. Until some client subscribes in a Shell session, the extension keeps the old behaviour: a broadcast `FocusChanged` with titles, and `GetFocus` answering anyone. Once a client has subscribed, it never falls back, even after the lock screen. Legacy mode is removed with the Bun daemon (migration step 5).

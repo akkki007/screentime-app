@@ -118,6 +118,7 @@ func New(db *sql.DB, provider focus.Provider, opts Options) *Tracker {
 
 // Start subscribes to focus and idle changes. The daemon drives Heartbeat.
 func (t *Tracker) Start() {
+	t.passTitleSetting()
 	t.unsubscribeFocus = t.provider.OnFocusChange(func(w focus.Window) {
 		t.opts.Serialize(func() { t.HandleFocusChange(w) })
 	})
@@ -157,7 +158,10 @@ func (t *Tracker) State() State {
 
 // Configure applies changed settings without dropping the focus subscription.
 func (t *Tracker) Configure(captureTitles bool, idleThresholdMs int64) {
-	t.opts.CaptureTitles = captureTitles
+	if captureTitles != t.opts.CaptureTitles {
+		t.opts.CaptureTitles = captureTitles
+		t.passTitleSetting()
+	}
 	if idleThresholdMs != t.opts.IdleThresholdMs {
 		t.opts.IdleThresholdMs = idleThresholdMs
 		// Changing a setting needs the user at the keyboard, so they're not idle.
@@ -166,6 +170,14 @@ func (t *Tracker) Configure(captureTitles bool, idleThresholdMs int64) {
 			t.unsubscribeIdle()
 		}
 		t.subscribeIdle()
+	}
+}
+
+// passTitleSetting lets a provider that supports it drop titles at the
+// source; the tracker drops them as well either way.
+func (t *Tracker) passTitleSetting() {
+	if tc, ok := t.provider.(focus.TitleCapture); ok {
+		tc.SetCaptureTitles(t.opts.CaptureTitles)
 	}
 }
 

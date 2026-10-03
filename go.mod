@@ -4,7 +4,10 @@ go 1.26.0
 
 toolchain go1.27.1
 
-require modernc.org/sqlite v1.60.1
+require (
+	github.com/godbus/dbus/v5 v5.2.2
+	modernc.org/sqlite v1.60.1
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
