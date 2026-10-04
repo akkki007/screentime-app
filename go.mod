@@ -6,6 +6,7 @@ toolchain go1.27.1
 
 require (
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/jezek/xgb v1.3.1
 	modernc.org/sqlite v1.60.1
 )
 

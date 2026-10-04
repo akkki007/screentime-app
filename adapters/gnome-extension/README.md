@@ -35,3 +35,32 @@ Owns the name `io.github.akkki007.screentime` and exports `/io/github/akkki007/s
 On Wayland, apps can't normally see each other's window titles, and titles often hold document names, chat contacts and page titles. So nothing goes on the bus for other processes to read, and titles don't leave the Shell unless the user opted in (issue #3; `docs/migration-to-go.md`, S6).
 
 **Legacy mode:** the Bun daemon talks to D-Bus through `gdbus monitor`, which can't subscribe. Until some client subscribes in a Shell session, the extension keeps the old behaviour: a broadcast `FocusChanged` with titles, and `GetFocus` answering anyone. Once a client has subscribed, it never falls back, even after the lock screen. Legacy mode is removed with the Bun daemon (migration step 5).
+
+## Manual test (privacy, issue #3)
+
+The Go daemon's side is tested in CI against a fake extension. Run the extension itself through this in a real session before closing #3:
+
+1. Install it with `./install.sh`, log out and back in, then `gnome-extensions enable screentime-focus@akkki007.github.io`.
+2. **Legacy mode (no Go daemon running):** `gdbus monitor --session --dest io.github.akkki007.screentime` shows `FocusChanged` with titles when you switch windows. This is unchanged, for the Bun daemon.
+3. Stop the Bun daemon (`systemctl --user stop screentime-daemon`). Then from the repo root run:
+   ```bash
+   go build -o bin/screentimed ./cmd/screentimed && SCREENTIME_DEBUG=1 bin/screentimed
+   ```
+4. Switching windows logs `focus -> <app>` lines without titles.
+5. In another terminal, `gdbus monitor --session --dest io.github.akkki007.screentime` now shows **nothing** when you switch windows.
+6. From another terminal, these calls must be refused:
+
+   | Call | Expected result |
+   | --- | --- |
+   | `GetFocus` | `('', '', uint32 0)` |
+   | `Subscribe` | `AccessDenied` |
+   | `SetCaptureTitles true` | `AccessDenied` |
+
+   For example:
+   ```bash
+   gdbus call --session --dest io.github.akkki007.screentime \
+     --object-path /io/github/akkki007/screentime/Focus \
+     --method io.github.akkki007.screentime.Focus.GetFocus
+   ```
+7. Turn on "Record window titles". Titles appear in the daemon log, and still nothing in `gdbus monitor`.
+8. Lock and unlock. The daemon re-subscribes, and `gdbus monitor` still shows nothing.
