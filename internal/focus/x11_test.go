@@ -1,7 +1,10 @@
 package focus
 
 import (
+	"errors"
 	"os"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -134,24 +137,53 @@ func TestX11ReportsTheActiveWindowThenEachChange(t *testing.T) {
 	noWindow(t, got)
 }
 
-func TestX11IdleReportsCrossings(t *testing.T) {
-	display := testDisplay(t)
-	x := &X11{Display: display, IdlePoll: 20 * time.Millisecond}
-	got := make(chan bool, 4)
-	// Nobody types on a private server, so any idle time crosses 1 ms.
-	stop := x.OnIdleChange(func(idle bool) { got <- idle }, 1)
-	defer stop()
-	select {
-	case idle := <-got:
-		if !idle {
-			t.Error("want idle")
+// pollIdle reports threshold crossings only, and survives query errors.
+func TestPollIdleReportsCrossingsOnly(t *testing.T) {
+	readings := []int64{0, 100, 250, 400, -1, 900, 50, 20}
+	var mu sync.Mutex
+	next := 0
+	query := func() (int64, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		if next >= len(readings) {
+			return 0, nil
 		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("no idle report")
+		v := readings[next]
+		next++
+		if v < 0 {
+			return 0, errors.New("server went away for a moment")
+		}
+		return v, nil
 	}
-	select {
-	case v := <-got:
-		t.Errorf("repeated report %v: only crossings should be reported", v)
-	case <-time.After(200 * time.Millisecond):
+	got := make(chan bool, 8)
+	done := make(chan struct{})
+	go pollIdle(done, time.Millisecond, 300, query, func(idle bool) { got <- idle })
+	waitFor(t, "all readings", func() bool { mu.Lock(); defer mu.Unlock(); return next >= len(readings) })
+	close(done)
+	var seen []bool
+	for len(got) > 0 {
+		seen = append(seen, <-got)
 	}
+	if want := []bool{true, false}; !reflect.DeepEqual(seen, want) {
+		t.Errorf("reports = %v, want %v", seen, want)
+	}
+}
+
+// On a real server, the idle query works. (How servers count idle time
+// without any input devices differs, e.g. Xvfb, so the value isn't checked.)
+func TestX11IdleQueryWorks(t *testing.T) {
+	display := testDisplay(t)
+	conn, err := xgb.NewConnDisplay(display)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if err := initScreenSaver(conn); err != nil {
+		t.Fatalf("MIT-SCREEN-SAVER: %v", err)
+	}
+	ms, err := idleMs(conn)
+	if err != nil {
+		t.Fatalf("idle query: %v", err)
+	}
+	t.Logf("server reports %d ms since the last input", ms)
 }

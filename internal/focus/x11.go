@@ -218,34 +218,51 @@ func (x *X11) OnIdleChange(cb func(bool), thresholdMs int64) func() {
 		conn.Close()
 		return func() {}
 	}
-	root := xproto.Drawable(xproto.Setup(conn).DefaultScreen(conn).Root)
 	every := x.IdlePoll
 	if every == 0 {
 		every = 5 * time.Second
 	}
 	done := make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(every)
-		defer ticker.Stop()
-		idle := false
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				info, err := screensaver.QueryInfo(conn, root).Reply()
-				if err != nil {
-					continue
-				}
-				if now := int64(info.MsSinceUserInput) >= thresholdMs; now != idle {
-					idle = now
-					cb(idle)
-				}
-			}
-		}
-	}()
+	go pollIdle(done, every, thresholdMs, func() (int64, error) { return idleMs(conn) }, cb)
 	return func() {
 		close(done)
 		conn.Close()
+	}
+}
+
+// idleMs is the time since the last keyboard or pointer input.
+func idleMs(conn *xgb.Conn) (int64, error) {
+	root := xproto.Drawable(xproto.Setup(conn).DefaultScreen(conn).Root)
+	info, err := screensaver.QueryInfo(conn, root).Reply()
+	if err != nil {
+		return 0, err
+	}
+	return int64(info.MsSinceUserInput), nil
+}
+
+// pollIdle calls query every interval until done is closed, and reports each
+// crossing of thresholdMs (not every poll). The first failure is logged.
+func pollIdle(done <-chan struct{}, every time.Duration, thresholdMs int64, query func() (int64, error), cb func(bool)) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+	idle, warned := false, false
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			ms, err := query()
+			if err != nil {
+				if !warned {
+					log.Printf("[x11] reading idle time: %v", err)
+					warned = true
+				}
+				continue
+			}
+			if now := ms >= thresholdMs; now != idle {
+				idle = now
+				cb(idle)
+			}
+		}
 	}
 }
