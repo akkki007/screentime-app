@@ -31,6 +31,12 @@ type Provider interface {
 	OnIdleChange(cb func(idle bool), thresholdMs int64) (unsubscribe func())
 }
 
+// TitleCapture is implemented by providers that can leave window titles out
+// at the source when the user hasn't opted in (the GNOME extension does).
+type TitleCapture interface {
+	SetCaptureTitles(capture bool)
+}
+
 // None reports nothing: no focus changes, never idle. Selected only
 // explicitly, so the RPC contract can run without a desktop session.
 type None struct{}

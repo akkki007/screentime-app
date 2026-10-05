@@ -83,10 +83,10 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 | --- | --- | --- |
 | 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | **Done:** [`contract/`](../contract/README.md). Fixtures checked in and replayable against any daemon via `CONTRACT_DAEMON_CMD` |
-| 2. Go daemon (**in progress**: core done, desktop adapters next) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed` (**done**, in CI, even with exact error messages); security requirements S1, S2, S6, S7, S8 met and tested (S1, S2, S7, S8 **done**; S6 with the GNOME provider) |
+| 2. Go daemon (**done**, apart from a manual check of the GNOME extension) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed` (**done**, in CI, even with exact error messages); security requirements S1, S2, S6, S7, S8 met and tested (S1, S2, S7, S8 **done**; S6 done and tested on the Go side, the extension half awaiting a manual test in GNOME Shell) |
 | 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
 | 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
-| 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
+| 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; remove the GNOME extension's legacy broadcast mode; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
 | 6. UI shell | Move the Svelte UI into a Wails app; rewrite the bridge; tray and reconnect logic in Go | Feature parity with the Electrobun app; S4 and S5 met |
 | 7. New work | Planner, then Windows and macOS providers | Tracked separately |
 
@@ -99,9 +99,15 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 - **Single instance.** Keep the refuse-to-start check if another daemon is already listening on the socket.
 - **Socket permissions.** Still `0600` under `$XDG_RUNTIME_DIR/screentime/`, now with the checks in S2.
 
-### Status after step 2b
+### Status after step 2
 
-`cmd/screentimed` runs with `SCREENTIME_FOCUS_PROVIDER=none` and passes every contract fixture. The tracker, web tracker, rules, queries, settings and app tests are all ported. Still to do in step 2: the GNOME (godbus) and X11 (xgb) providers and the D-Bus notifier.
+`cmd/screentimed` passes every contract fixture, and every Bun daemon test has a Go counterpart.
+
+- **GNOME:** focus over godbus, subscribed to the extension (S6), and idle from Mutter watches, so there is no polling and no lag.
+- **X11:** focus from `_NET_ACTIVE_WINDOW` and idle from MIT-SCREEN-SAVER, both over xgb, so `xprop` and `xprintidle` are no longer needed.
+- **Notifications:** sent over godbus.
+- **Tests:** the providers' integration tests run in CI against a private `dbus-daemon` and Xvfb.
+- **Still open:** run the revised GNOME extension in a real Shell (checklist in the step 2c commit and `adapters/gnome-extension/README.md`), then close #3.
 
 First memory reading (12 s idle, `none` provider, same sandbox): `screentimed` **10 MB** RSS against **63 MB** for the Bun daemon run from source. The stripped binary is 7.8 MB. The proper measurement on a real session is still step 3's.
 

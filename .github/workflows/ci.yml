@@ -62,8 +62,15 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # The focus providers' integration tests need a private session bus
+      # and a private X server (no window manager).
+      - name: Install test servers
+        run: sudo apt-get update && sudo apt-get install -y dbus xvfb
+
       - name: Test
-        run: go test -race ./...
+        run: |
+          Xvfb :99 -screen 0 640x480x24 &
+          SCREENTIME_TEST_X_DISPLAY=:99 go test -race ./...
 
       - name: Vulnerability check
         # Pinned as a module tool (go.mod), so go.sum locks its version.

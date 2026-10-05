@@ -68,7 +68,12 @@ func run() error {
 	}
 	defer db.Close()
 
-	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), nil)
+	dirs := apps.ApplicationDirs()
+	candidates := []focus.Provider{
+		&focus.Gnome{Now: now},
+		&focus.X11{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
+	}
+	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), candidates)
 	if err != nil {
 		return err
 	}
@@ -77,9 +82,9 @@ func run() error {
 	d, err := daemon.New(daemon.Config{
 		DB:       db,
 		Provider: provider,
-		Notifier: notify.Discard{},
+		Notifier: &notify.DBus{},
 		Now:      now,
-		Lookup:   apps.DirLookup(apps.ApplicationDirs()),
+		Lookup:   apps.DirLookup(dirs),
 		Debug:    os.Getenv("SCREENTIME_DEBUG") == "1",
 	})
 	if err != nil {
