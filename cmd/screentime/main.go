@@ -71,11 +71,10 @@ func run(startHidden bool) error {
 		gpu = application.WebviewGpuPolicyNever
 	}
 
+	trayHost := shell.TrayHostAvailable()
+	win := &windows{trayHost: trayHost, gpu: gpu, keepPanel: os.Getenv("SCREENTIME_OPEN_PANEL") == "1"}
 	var (
 		app       *application.App
-		main      *application.WebviewWindow
-		panel     *application.WebviewWindow
-		trayHost  = shell.TrayHostAvailable()
 		ui        = &uiState{names: map[string]string{}}
 		conn      *shell.Conn
 		refreshUI func()
@@ -114,8 +113,8 @@ func run(startHidden bool) error {
 	bridge := &shell.Bridge{
 		Conn: conn,
 		OpenDashboardFn: func() {
-			panel.Hide()
-			showMain(main)
+			win.closePanel()
+			win.openMain()
 		},
 		QuitFn:   func() { app.Quit() },
 		RevealFn: shell.Reveal,
@@ -127,57 +126,24 @@ func run(startHidden bool) error {
 		Icon:        icon("tray"),
 		Services:    []application.Service{application.NewService(bridge)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(dist)},
-		Linux:       application.LinuxOptions{ApplicationID: appID, ProgramName: appID},
+		Linux: application.LinuxOptions{
+			ApplicationID: appID,
+			ProgramName:   appID,
+			// The tray keeps the app alive with every window closed.
+			DisableQuitOnLastWindowClosed: true,
+		},
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID:               appID,
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) { showMain(main) },
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) { win.openMain() },
 		},
 		OnShutdown: func() { conn.Stop() },
 	})
-
-	linux := application.LinuxWindow{WebviewGpuPolicy: gpu}
-	main = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:      "main",
-		Title:     "Screentime",
-		URL:       "/",
-		Width:     1120,
-		Height:    780,
-		MinWidth:  760,
-		MinHeight: 560,
-		Hidden:    startHidden && trayHost,
-		Linux:     linux,
-	})
-	// Closing the window leaves the app in the tray; tracking never depended
-	// on it. Without a tray to come back from, closing quits the UI instead.
-	main.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		if trayHost {
-			main.Hide()
-			e.Cancel()
-		}
-	})
-
-	panelLinux := linux
-	panelLinux.WindowIsTranslucent = true
-	panel = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:             "panel",
-		Title:            "Screentime quick panel",
-		URL:              "/#widget",
-		Width:            372,
-		Height:           624,
-		Frameless:        true,
-		AlwaysOnTop:      true,
-		DisableResize:    true,
-		Hidden:           os.Getenv("SCREENTIME_OPEN_PANEL") != "1",
-		HideOnEscape:     true,
-		HideOnFocusLost:  os.Getenv("SCREENTIME_OPEN_PANEL") != "1",
-		BackgroundType:   application.BackgroundTypeTransparent,
-		BackgroundColour: application.NewRGBA(0, 0, 0, 0),
-		Linux:            panelLinux,
-	})
+	win.app = app
 
 	tray := app.SystemTray.New()
 	tray.SetIcon(icon("tray"))
-	tray.AttachWindow(panel).WindowOffset(8)
+	win.tray = tray
+	tray.OnClick(win.togglePanel)
 
 	lastIcon := ""
 	refreshUI = func() {
@@ -201,13 +167,23 @@ func run(startHidden bool) error {
 			}
 			mi := menu.Add(item.Label).SetEnabled(!item.Disabled)
 			if action, ok := shell.ParseAction(item.Action); ok {
-				mi.OnClick(func(*application.Context) { handleAction(app, conn, main, panel, tray, action) })
+				mi.OnClick(func(*application.Context) { handleAction(app, conn, win, action) })
 			}
 		}
 		tray.SetMenu(menu)
 	}
 	refreshUI()
 	conn.Start()
+	// A tray-resident app holds no webview while idle: windows are created
+	// when they are opened and destroyed when they are closed.
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		if !startHidden || !trayHost {
+			win.openMain()
+		}
+		if win.keepPanel {
+			win.togglePanel()
+		}
+	})
 	go func() {
 		for range time.Tick(time.Minute) {
 			ui.refreshToday(conn, refreshUI)
@@ -217,19 +193,119 @@ func run(startHidden bool) error {
 	return app.Run()
 }
 
-func showMain(w *application.WebviewWindow) {
-	w.Show()
-	w.Restore()
-	w.Focus()
+// windows creates the dashboard and the quick panel on demand.
+type windows struct {
+	app       *application.App
+	tray      *application.SystemTray
+	trayHost  bool
+	gpu       application.WebviewGpuPolicy
+	keepPanel bool // dev aid: don't close the panel when it loses focus
+
+	mu    sync.Mutex
+	main  *application.WebviewWindow
+	panel *application.WebviewWindow
 }
 
-func handleAction(app *application.App, conn *shell.Conn, main, panel *application.WebviewWindow, tray *application.SystemTray, a shell.Action) {
+func (w *windows) openMain() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.main != nil {
+		w.main.Show()
+		w.main.Restore()
+		w.main.Focus()
+		return
+	}
+	created := w.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:      "main",
+		Title:     "Screentime",
+		URL:       "/",
+		Width:     1120,
+		Height:    780,
+		MinWidth:  760,
+		MinHeight: 560,
+		Linux:     application.LinuxWindow{WebviewGpuPolicy: w.gpu},
+	})
+	created.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
+		w.mu.Lock()
+		if w.main == created {
+			w.main = nil
+		}
+		w.mu.Unlock()
+		// Without a tray to come back from, closing the window quits the UI.
+		if !w.trayHost {
+			w.app.Quit()
+		}
+	})
+	w.main = created
+}
+
+// togglePanel opens the quick panel: a small frameless window, the nearest
+// thing to a popover that a tray icon allows (its own menu can't be styled).
+// It closes when it loses focus or on Escape. Wayland compositors ignore
+// requested positions, so on GNOME it appears where the shell puts it.
+func (w *windows) togglePanel() {
+	w.mu.Lock()
+	if w.panel != nil {
+		panel := w.panel
+		w.mu.Unlock()
+		panel.Close()
+		return
+	}
+	linux := application.LinuxWindow{WebviewGpuPolicy: w.gpu, WindowIsTranslucent: true}
+	created := w.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:             "panel",
+		Title:            "Screentime quick panel",
+		URL:              "/#widget",
+		Width:            372,
+		Height:           624,
+		Frameless:        true,
+		AlwaysOnTop:      true,
+		DisableResize:    true,
+		HideOnEscape:     false,
+		BackgroundType:   application.BackgroundTypeTransparent,
+		BackgroundColour: application.NewRGBA(0, 0, 0, 0),
+		Linux:            linux,
+	})
+	w.panel = created
+	w.mu.Unlock()
+
+	created.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
+		w.mu.Lock()
+		if w.panel == created {
+			w.panel = nil
+		}
+		w.mu.Unlock()
+	})
+	if !w.keepPanel {
+		openedAt := time.Now()
+		created.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
+			// Ignore the focus churn while the window is still being mapped.
+			if time.Since(openedAt) > 700*time.Millisecond {
+				created.Close()
+			}
+		})
+	}
+	if w.tray != nil {
+		_ = w.tray.PositionWindow(created, 8)
+	}
+}
+
+func (w *windows) closePanel() {
+	w.mu.Lock()
+	panel := w.panel
+	w.mu.Unlock()
+	if panel != nil {
+		panel.Close()
+	}
+}
+
+func handleAction(app *application.App, conn *shell.Conn, win *windows, a shell.Action) {
 	var err error
 	switch a.Kind {
 	case "open":
-		showMain(main)
+		win.openMain()
 	case "widget":
-		tray.ToggleWindow()
+		win.togglePanel()
 	case "pause":
 		_, err = conn.Call("tracker.pause", map[string]int{"minutes": a.Minutes})
 	case "resume":

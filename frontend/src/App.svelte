@@ -85,7 +85,8 @@ const needsOnboarding = $derived(
 						<p class="font-medium">The Screentime daemon isn't running</p>
 						<p class="mt-0.5 text-muted">
 							Tracking happens in a background service, so nothing is being recorded right now. Start it with
-							<code class="rounded bg-surface px-1">bun run dev:daemon</code> or <code class="rounded bg-surface px-1">systemctl --user start screentime-daemon</code>.
+							<code class="rounded bg-surface px-1">systemctl --user start screentime-daemon</code>
+							(from a source checkout: <code class="rounded bg-surface px-1">go run ./cmd/screentimed</code>).
 							This window reconnects automatically.
 						</p>
 						{#if store.connectionError}<p class="mt-1 text-xs text-muted">Details: {store.connectionError}</p>{/if}
