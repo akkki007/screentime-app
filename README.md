@@ -35,15 +35,16 @@ Mutter IdleMonitor ─────┼─ D-Bus ──> Tracker daemon (systemd -
 Browser extension ──────┘                    │
                                        Unix socket JSON-RPC
                                               │
-                                        Electrobun UI
+                                  Screentime app (Wails)
 ```
 
 ## Repo structure
 
 ```
 cmd/screentimed/       tracker daemon (Go): tracker, rules engine, RPC server, native host
-internal/              the daemon's packages: store, tracker, rules, rpc, focus providers
-apps/desktop/          Electrobun app (Svelte UI + tray)
+internal/              store, tracker, rules, rpc, focus providers, native host, UI shell core
+cmd/screentime/        desktop app (Go + Wails): tray, quick panel, dashboard window
+frontend/              the Svelte UI the app shows
 adapters/              per-desktop focus adapters that must run outside the daemon (GNOME extension)
 extensions/browser/    WebExtension + native messaging host
 packages/shared/       Zod schemas, RPC types, settings, categories
@@ -54,7 +55,7 @@ docs/                  architecture, ADRs, adapter guide
 
 ## Getting started
 
-Requires [Go](https://go.dev/dl/) (the version in `go.mod`) for the daemon and [Bun](https://bun.sh) >= 1.1 for the dashboard and browser extension, on Linux. Ubuntu with GNOME on Wayland is the reference setup.
+Requires [Go](https://go.dev/dl/) (the version in `go.mod`) and [Bun](https://bun.sh) >= 1.1 on Linux, plus `libwebkit2gtk-4.1-dev` and `libgtk-3-dev` to build the app. Ubuntu with GNOME on Wayland is the reference setup.
 
 ```bash
 bun install
@@ -66,11 +67,11 @@ adapters/gnome-extension/install.sh
 go run ./cmd/screentimed                  # or: bun run dev:daemon
 packaging/systemd/install-dev.sh          # alternative: build it and start at login
 
-# 3. Open the dashboard (first run downloads the Electrobun toolchain)
+# 3. Build and open the app (needs the two -dev packages above)
 bun run dev:desktop
 ```
 
-The dashboard also runs in a plain browser against demo data, with no daemon: `bun run --cwd apps/desktop hmr`, then open <http://localhost:5173>. See [`apps/desktop/README.md`](apps/desktop/README.md).
+The dashboard also runs in a plain browser against demo data, with no daemon: `bun run --cwd frontend hmr`, then open <http://localhost:5173>. See [`frontend/README.md`](frontend/README.md).
 
 For per-site time, install the [browser extension](extensions/browser/README.md). Nothing else is needed on X11: focus and idle are read directly from the X server.
 
@@ -83,6 +84,7 @@ go vet ./... && go test ./...          # the daemon
 bun run lint
 bun run typecheck
 bun run test                           # UI and extension
+bun run build:app                      # frontend + the Wails app into bin/screentime
 bun run test:contract                  # builds screentimed, replays the IPC fixtures
 ```
 

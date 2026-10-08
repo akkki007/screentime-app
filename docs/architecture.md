@@ -13,7 +13,7 @@ An open-source, local-first screentime and digital wellbeing app for Linux: trac
 
 ## Architecture
 
-A background tracker daemon owns all data. The Electrobun UI is only a client. Tracking keeps running while the UI is closed.
+A background tracker daemon owns all data. The Wails desktop app is only a client. Tracking keeps running while the UI is closed.
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ flowchart LR
   BX[Browser extension] -- native messaging --> D
   D[Tracker daemon<br/>systemd --user] --> DB[(SQLite)]
   D -- libnotify --> N[Notifications]
-  UI[Electrobun UI<br/>dashboard + tray] -- Unix socket JSON-RPC --> D
+  UI[Wails app<br/>dashboard + quick panel + tray] -- Unix socket JSON-RPC --> D
   D -. optional .-> P[Privileged helper<br/>polkit, v2]
 ```
 
@@ -31,7 +31,7 @@ flowchart LR
 | Focus adapter | Reports focused app (app\_id, title, pid) on change | GNOME Shell extension (per desktop) |
 | Tracker daemon | Heartbeats, idle merge, sessions, rules engine, limits, reminders | `systemd --user` service |
 | SQLite store | Events, sessions, limits, categories | File in `~/.local/share/<app>/` |
-| Electrobun UI | Dashboard, settings, tray, onboarding | User app, launched on demand |
+| Wails app (`cmd/screentime`) | Dashboard, quick panel, settings, tray, onboarding | User app, launched on demand; windows exist only while open |
 | Browser extension | Active tab domain and time; site blocking | Firefox/Chromium extension |
 | Privileged helper (v2) | Tamper-resistant limits, hosts/DNS blocking | System service via polkit |
 
@@ -41,7 +41,7 @@ The daemon and native host are Go; the dashboard, browser extension and shared s
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| Desktop shell | Electrobun 2 (WebKitGTK, Bun main process, built with Hutch) | Small bundles, TS end to end; see [ADR 2](adr/0002-electrobun-with-a-bun-main-process.md) |
+| Desktop shell | Wails v3 (WebKitGTK 4.1 via `-tags gtk3`, Go main process) | Tray, attached panel window and multiple windows built in; one 10 MB binary; see [ADR 9](adr/0009-wails-v3-ui-shell.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
 | Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
 | Daemon | Go (`cmd/screentimed`) | One small static binary (~8 MB, ~10 MB idle); build tags for per-OS providers |
@@ -51,7 +51,7 @@ The daemon and native host are Go; the dashboard, browser extension and shared s
 | Schemas | Zod (shared package) exported to `contract/` JSON Schema; Go structs by hand | Fixtures check every field on both sides |
 | GNOME adapter | GNOME Shell extension (GJS, ESM, GNOME 45+) | The only reliable focus source on GNOME Wayland |
 | Notifications | `org.freedesktop.Notifications` over D-Bus | Native on every desktop |
-| Monorepo | Bun workspaces | No extra tooling |
+| Monorepo | One Go module; Bun workspaces for the TypeScript parts | No extra tooling |
 | Quality | `gofmt`/`go vet`/`go test -race`/`govulncheck`; Biome and `bun test` for TS; GitHub Actions | Fast, minimal config |
 | Packaging | .deb + AppImage; extension via extensions.gnome.org | Flatpak's sandbox blocks tracking |
 
@@ -139,7 +139,7 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 - **Browser → daemon:** native messaging host (`screentimed native-host`) that forwards `{domain, active}` to the socket after checking the socket belongs to the user.
 - **Versioning:** a `version` handshake on connect. The daemon rejects clients on a different major version.
 - **Single instance:** the daemon refuses to start if another is already listening on the socket (a second one would unlink it and both would write the same database).
-- **UI bridge:** the webview never opens the socket. The Electrobun main process owns the connection (with automatic reconnect), forwards only method names the daemon defines, and relays notifications. See [ADR 3](adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
+- **UI bridge:** the webview never opens the socket. The Go main process owns the connection (`internal/shell`, with automatic reconnect and S3 ownership checks), forwards only the UI's allow-listed method names, and relays notifications. See [ADR 3](adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
 
 ## Wellbeing rules
 
@@ -160,8 +160,8 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 /
 ├─ cmd/screentimed/       # tracker daemon (Go) and `native-host` subcommand
 ├─ internal/              # store, tracker, rules, rpc, focus providers, nativehost
-├─ apps/
-│  └─ desktop/            # Electrobun app (Svelte UI + tray)
+├─ cmd/screentime/        # desktop app (Go + Wails)
+├─ frontend/              # the Svelte UI it shows
 ├─ adapters/
 │  ├─ gnome-extension/    # GJS Shell extension (focus → D-Bus)
 │  ├─ x11/
@@ -178,15 +178,15 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 
 ## Roadmap
 
-> The daemon and native host are Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)); the UI shell is still Electrobun until it moves to Wails.
+> The daemon and native host are Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)); the UI shell is Wails v3 ([ADR 9](adr/0009-wails-v3-ui-shell.md)).
 
 A phase starts only after the previous phase meets its exit criteria. **Status** is what has actually been verified, not just written.
 
 | Phase | Scope | Exit criteria | Status |
 | --- | --- | --- | --- |
-| 0. Spike | Electrobun hello world on Ubuntu; GNOME extension logs focus; D-Bus from the daemon | Focus changes print in the daemon terminal | **Done.** Electrobun runs on Ubuntu 26.04/GNOME 50; D-Bus first used `dbus-next`, later replaced by `gdbus` (ADR 6) |
+| 0. Spike | Desktop shell hello world on Ubuntu; GNOME extension logs focus; D-Bus from the daemon | Focus changes print in the daemon terminal | **Done.** The first shell (Electrobun, since replaced by Wails) ran on Ubuntu 26.04/GNOME 50; D-Bus first used `dbus-next`, later replaced by `gdbus` (ADR 6) |
 | 1. Tracker | Daemon, GNOME adapter, idle, SQLite, systemd unit | 24 h of accurate sessions, daemon under 60 MB RSS | **Built and unit-tested (Go).** Idle RSS ~10 MB in a sandbox with no desktop (it was 43 MB under Bun); the 24 h soak on a real session has not been run |
-| 2. Dashboard | Electrobun UI: today, week, per-app view, tray, pause | Totals match a manual check to within 1 min per hour | **Built.** Runs against the live daemon; the manual accuracy check has not been done |
+| 2. Dashboard | Dashboard: today, week, per-app view, tray, pause | Totals match a manual check to within 1 min per hour | **Built.** Runs against the live daemon; the manual accuracy check has not been done |
 | 3. Wellbeing | Break reminders, daily limits (notify + overlay), downtime schedule, focus mode | Limits fire reliably across suspend/resume | **Built.** Suspend/resume covered with a fake clock; not yet exercised on a real suspend |
 | 4. Web + desktops | Browser extension, X11 adapter, categories | Per-site time works in Firefox and Chromium | **Built, not browser-tested.** Native host verified end to end; the extension itself has not been loaded in a real browser. X11 provider integration-tested against Xvfb in CI, not yet on a real X11 session |
 | 5. v1.0 | .deb + AppImage, extension published on EGO, docs | Fresh install to tracking in under 5 min | **Partial.** `.deb` builds and its parts run; not installed system-wide. No AppImage; not on extensions.gnome.org |
@@ -206,7 +206,7 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
-| Electrobun is young; Linux tray and WebKitGTK may have quirks | UI bugs, blocked features | Keep the UI a thin client of the daemon; Tauri is the fallback shell |
+| Wails v3 is a beta; Linux tray and WebKitGTK may have quirks | UI bugs, blocked features | Pinned version; keep the UI a thin client of the daemon and the shell a thin layer over `internal/shell`, so v2 or Tauri could replace it |
 | GNOME Shell API changes each release | Extension breaks on upgrade | Keep the extension tiny (focus only); test on the current and previous GNOME |
 | Daemon can't reach the session bus | No focus or notifications | The `gdbus` tool is part of GLib and present on GNOME systems; the provider reports it as unavailable if missing |
 | Daemon memory while idle | Heavy for an always-on service | Was 43 MB under Bun; the Go daemon idled at ~10 MB in a sandbox with no desktop. Record the real-session number after the 24 h soak (`scripts/soak`) |

@@ -1,6 +1,6 @@
 /**
- * Generates the tray icons in src/assets from geometry, so there is no binary
- * artwork to hand-maintain:  bun run scripts/make-tray-icons.ts
+ * Generates the tray icons in cmd/screentime/icons from geometry, so there is no binary
+ * artwork to hand-maintain:  bun run frontend/scripts/make-tray-icons.ts
  *
  * Each icon is a bold disc (it has to read at ~22 px on a dark top bar) with
  * its glyph knocked out: tracking = clock hands, paused = pause bars, focus =
@@ -115,7 +115,7 @@ const icons: Record<string, { shape: Shape; color: Rgb }> = {
   },
 };
 
-const assets = join(import.meta.dir, '..', 'src', 'assets');
+const assets = join(import.meta.dir, '..', '..', 'cmd', 'screentime', 'icons');
 for (const [name, { shape, color }] of Object.entries(icons)) {
   writeFileSync(join(assets, `${name}.png`), render(shape, color));
   console.log(`wrote ${name}.png`);

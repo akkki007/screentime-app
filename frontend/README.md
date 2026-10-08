@@ -1,29 +1,39 @@
-# Desktop app
+# Frontend
 
-The dashboard and tray: an [Electrobun](https://blackboard.sh/electrobun) app (WebKitGTK) with a **Bun main process** and a **Svelte 5 + Tailwind 4** UI. It is a thin client of the daemon; it never touches SQLite. See [ADR 2](../../docs/adr/0002-electrobun-with-a-bun-main-process.md) and [ADR 3](../../docs/adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
+The Svelte 5 + Tailwind 4 UI that the desktop app (`cmd/screentime`, Wails) shows: the dashboard and the quick panel. It is a thin client of the daemon and never touches SQLite. In the app it reaches the daemon through the Go `Bridge` service (`internal/shell`); see [ADR 3](../docs/adr/0003-ui-reaches-the-daemon-through-its-main-process.md) and [ADR 9](../docs/adr/0009-wails-v3-ui-shell.md).
 
 ```
-src/bun/        main process: window, tray, DaemonConnection (auto-reconnect), bridge handlers
-src/shared/     the webview <-> main-process RPC schema
-src/mainview/   the Svelte UI (views/, components/, lib/)
+index.html
+src/main.ts, App.svelte     entry and shell
+src/views/, components/     the screens and their parts
+src/lib/bridge.ts           the app bridge (Wails) and the browser-preview fallback
+src/lib/mock.ts             the in-memory mock daemon for previews and screenshots
+dist/                       the production build, embedded into the Go binary (git-ignored)
 ```
 
 ## Develop
 
-The daemon must be running for real data (`bun run dev:daemon` from the repo root).
+The daemon should be running for real data (`go run ./cmd/screentimed` from the repo root). To build and run the app you need Go, Bun, a C compiler, and `libwebkit2gtk-4.1-dev` and `libgtk-3-dev`:
 
 ```bash
-bun run dev      # build the UI, then launch the app (rebuilds on change)
-bun run hmr      # Vite dev server on :5173 for hot reload; launch the app in a second terminal
-bun run test     # unit tests
-bun run typecheck
+bun run dev:desktop            # from the repo root: build the UI and the app, then run it
+bun run build:app              # the same without running it: bin/screentime
+bun run --cwd frontend test    # unit tests
+bun run --cwd frontend typecheck
 ```
 
-The first run downloads the Hutch/Electrobun toolchain into `~/.hutch`.
+For hot reload inside the app, start Vite and point a **development** build at it (a build with `-tags production`, such as the `.deb`, ignores this on purpose):
 
-### Preview without Electrobun or a daemon
+```bash
+bun run --cwd frontend hmr                                  # Vite on :5173
+FRONTEND_DEVSERVER_URL=http://localhost:5173 bin/screentime
+```
 
-With the Vite server running (`bun run hmr`) open <http://localhost:5173> in any browser. Outside Electrobun the UI uses an in-memory mock daemon with seeded fixture data, so every screen can be developed and screenshotted. Query parameters help:
+Useful environment variables for the app: `SCREENTIME_OPEN_PANEL=1` opens the quick panel at startup (a script can't click the tray), `SCREENTIME_SOFTWARE_RENDERING=1` turns off WebKit's GPU acceleration if a driver shows a blank window, and `--hidden` starts it in the tray only.
+
+### Preview in a browser, without the app or a daemon
+
+With the Vite server running (`bun run hmr`) open <http://localhost:5173> in any browser. Outside the app the UI uses an in-memory mock daemon with seeded fixture data, so every screen can be developed and screenshotted. Query parameters help:
 
 | Parameter | Effect |
 | --- | --- |
@@ -33,7 +43,7 @@ With the Vite server running (`bun run hmr`) open <http://localhost:5173> in any
 | `?disconnected=1` | show the daemon-offline state |
 | `?limitHit=1` / `?toast=1` | trigger the limit overlay / a reminder toast |
 
-The mock is `src/mainview/lib/mock.ts`. Keep it in step with `packages/shared/src/ipc.ts`.
+The mock is `src/lib/mock.ts`. Keep it in step with `packages/shared/src/ipc.ts`. It is only loaded in development builds, so it never ships in the app.
 
 To screenshot a view headlessly (this is how `docs/media` was made; it needs Firefox and captures only the page):
 
@@ -42,16 +52,8 @@ bun run screenshot -- out.png "http://localhost:5173/?view=limits&theme=dark" 12
 bun run screenshot -- out.png "http://localhost:5173/?view=limits" 1280x700 1500 "text=New limit"   # click first
 ```
 
-## Build
-
-```bash
-bun run build    # production build into build/ and artifacts/
-```
-
-`packaging/deb/build.sh` turns that into a `.deb`.
-
 ## Notes
 
-- Closing the window leaves the app in the tray (`exitOnLastWindowClosed: false`). GNOME needs the AppIndicator extension to show a tray icon.
-- Hutch's script runner cannot see workspace-hoisted binaries, so build steps live in `package.json`, not `hutch.config.ts`.
-- `.hutch/`, `build/`, `dist/` and `artifacts/` are generated and gitignored.
+- Closing the dashboard leaves the app in the tray when the desktop has one; GNOME needs the AppIndicator extension. Without a tray host, closing quits the UI (tracking is unaffected). Windows are created when opened and destroyed when closed, so a resting app holds no webview.
+- The tray icons in `cmd/screentime/icons` are generated by `scripts/make-tray-icons.ts`.
+- `dist/` is generated and git-ignored apart from a placeholder that lets `go vet` work before the UI is built.

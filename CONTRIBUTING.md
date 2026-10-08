@@ -7,12 +7,12 @@ Thanks for considering a contribution to Screentime! The tracker daemon is Go; t
 ```bash
 bun install
 go run ./cmd/screentimed   # tracker daemon (needs the GNOME extension on GNOME/Wayland)
-bun run dev:desktop  # dashboard; first run downloads the Electrobun toolchain (Hutch)
+bun run dev:desktop  # builds the Wails app (needs libwebkit2gtk-4.1-dev and libgtk-3-dev) and opens it
 ```
 
-The dashboard can also be developed with no daemon and no Electrobun: see [`apps/desktop/README.md`](apps/desktop/README.md#preview-without-electrobun-or-a-daemon).
+The dashboard can also be developed with no daemon and no desktop shell, in a plain browser: see [`frontend/README.md`](frontend/README.md#preview-in-a-browser-without-the-app-or-a-daemon).
 
-The Go packages under `internal/` and the TypeScript packages under `apps/`, `extensions/` and `packages/` can be built and tested independently.
+The Go packages under `internal/` and the TypeScript packages under `frontend/`, `extensions/` and `packages/` can be built and tested independently. `cmd/screentime` needs `-tags gtk3` (`go build -tags gtk3 ./cmd/screentime`), which `bun run build:app` does for you.
 
 ## Workflow
 
@@ -22,7 +22,7 @@ The Go packages under `internal/` and the TypeScript packages under `apps/`, `ex
    ```bash
    gofmt -l . && go vet ./... && go test ./...
    bun run lint
-   bun run typecheck   # the desktop app needs the Hutch toolchain (see apps/desktop/README.md)
+   bun run typecheck
    bun run test
    bun run test:contract   # if you touched the daemon's RPC behaviour
    ```
@@ -35,7 +35,7 @@ Look for issues labeled [`good first issue`](../../labels/good%20first%20issue).
 
 - **New desktop adapters** — implement the `focus.Provider` interface (see `internal/focus/focus.go`) for a new compositor or window manager. See [`docs/adapters.md`](docs/adapters.md).
 - **App categories** — help classify common Linux apps as productive/unproductive.
-- **UI translations** — the Svelte dashboard in `apps/desktop`.
+- **UI translations** — the Svelte dashboard in `frontend/`.
 - **Verification we could not do** — the browser extension in a real browser, the X11 adapter on an X11 session, the GNOME extension on GNOME 45–49, a real suspend/resume, and a 24 h accuracy run. See the status table in `docs/architecture.md`.
 
 ## Design principles to respect
