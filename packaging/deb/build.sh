@@ -5,38 +5,27 @@
 #   SKIP_UI_BUILD=1 packaging/deb/build.sh  reuse an existing apps/desktop/build
 #   NO_UI=1 packaging/deb/build.sh          daemon + extension only (no UI)
 #
-# Needs: bun, go, dpkg-deb, and (for the UI) the Hutch/Electrobun toolchain plus zstd.
+# Needs: go, dpkg-deb, and (for the UI) bun, the Hutch/Electrobun toolchain plus zstd.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="${1:-$ROOT/dist}"
 cd "$ROOT"
 
-VERSION="$(bun -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")"
+VERSION="$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' package.json | head -n1)"
 ARCH="$(dpkg --print-architecture)"
 EXT_UUID="screentime-focus@akkki007.github.io"
 HOST_NAME="io.github.akkki007.screentime"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-# The Bun daemon is a minified JS bundle that runs on the Bun runtime at
-# /usr/lib/screentime/bun (the UI's own copy when it is included).
-bundle() {
-  bun build "$1" --target bun --minify --outfile "$STAGE/$2.tmp" >/dev/null
-  { printf '#!/usr/lib/screentime/bun\n'; cat "$STAGE/$2.tmp"; } > "$STAGE/$2"
-  rm "$STAGE/$2.tmp"
-  chmod 755 "$STAGE/$2"
-}
-
-echo "==> daemon"
+echo "==> daemon (screentimed)"
 install -d "$STAGE/usr/lib/screentime"
-bundle apps/daemon/src/index.ts usr/lib/screentime/daemon
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$STAGE/usr/lib/screentime/screentimed" ./cmd/screentimed
 
 echo "==> browser native-messaging host (screentimed native-host)"
 # Browsers launch the manifest's path with their own arguments, so it is a
 # symlink to screentimed, which recognises the link's name.
-install -d "$STAGE/usr/lib/screentime"
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$STAGE/usr/lib/screentime/screentimed" ./cmd/screentimed
 ln -s screentimed "$STAGE/usr/lib/screentime/screentime-native-host"
 install -d "$STAGE/usr/lib/mozilla/native-messaging-hosts"
 cat > "$STAGE/usr/lib/mozilla/native-messaging-hosts/$HOST_NAME.json" <<JSON
@@ -87,7 +76,6 @@ if [ -z "${NO_UI:-}" ]; then
   chmod 755 "$STAGE/usr/bin/screentime"
   DEPENDS="libwebkit2gtk-4.1-0, libgtk-3-0"
 else
-  install -m755 "$(command -v bun)" "$STAGE/usr/lib/screentime/bun"
   DEPENDS="libc6"
 fi
 
@@ -101,7 +89,7 @@ Section: utils
 Priority: optional
 Architecture: $ARCH
 Depends: $DEPENDS
-Recommends: gnome-shell-extension-appindicator, xprintidle
+Recommends: gnome-shell-extension-appindicator
 Suggests: firefox
 Installed-Size: $SIZE_KB
 Maintainer: Screentime contributors <noreply@users.noreply.github.com>

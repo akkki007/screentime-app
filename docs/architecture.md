@@ -37,22 +37,22 @@ flowchart LR
 
 ## Tech stack
 
-The whole stack is TypeScript/JavaScript, so contributors need only one language. Rust stays an option for the daemon if its footprint becomes a problem.
+The daemon and native host are Go; the dashboard, browser extension and shared schemas are TypeScript. Go was chosen to meet the footprint budget, to speak D-Bus without a subprocess, and to cross-compile ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)).
 
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Desktop shell | Electrobun 2 (WebKitGTK, Bun main process, built with Hutch) | Small bundles, TS end to end; see [ADR 2](adr/0002-electrobun-with-a-bun-main-process.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
 | Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
-| Daemon | Bun + TypeScript | Shares types with the UI; one toolchain |
-| D-Bus | the `gdbus` tool (`monitor` for signals, `call` for methods) | `dbus-next` worked under Bun but cost ~25 MB resident; see [ADR 6](adr/0006-dbus-through-gdbus.md) |
-| Storage | SQLite via `bun:sqlite`, WAL mode | Zero-dependency, fast, easy to back up |
+| Daemon | Go (`cmd/screentimed`) | One small static binary (~8 MB, ~10 MB idle); build tags for per-OS providers |
+| D-Bus | `github.com/godbus/dbus/v5` on one persistent connection | Real idle watches and unicast signals; replaced the `gdbus` subprocess of [ADR 6](adr/0006-dbus-through-gdbus.md) |
+| Storage | SQLite via `modernc.org/sqlite` (pure Go, no cgo), WAL mode | Zero-dependency, fast, easy to back up |
 | IPC | JSON-RPC 2.0 over a Unix socket | Simple, language-neutral, easy to debug with `socat` |
-| Schemas | Zod (shared package) | One source of truth for IPC and config |
+| Schemas | Zod (shared package) exported to `contract/` JSON Schema; Go structs by hand | Fixtures check every field on both sides |
 | GNOME adapter | GNOME Shell extension (GJS, ESM, GNOME 45+) | The only reliable focus source on GNOME Wayland |
 | Notifications | `org.freedesktop.Notifications` over D-Bus | Native on every desktop |
 | Monorepo | Bun workspaces | No extra tooling |
-| Quality | Biome (lint + format), `bun test`, GitHub Actions | Fast, minimal config |
+| Quality | `gofmt`/`go vet`/`go test -race`/`govulncheck`; Biome and `bun test` for TS; GitHub Actions | Fast, minimal config |
 | Packaging | .deb + AppImage; extension via extensions.gnome.org | Flatpak's sandbox blocks tracking |
 
 ## Focus adapters
@@ -72,7 +72,7 @@ type FocusedWindow = { appId: string; title?: string; pid?: number; ts: number }
 | Adapter | Focus source | Idle source | Priority |
 | --- | --- | --- | --- |
 | gnome-wayland | Own Shell extension that emits `FocusChanged` on the session bus | `org.gnome.Mutter.IdleMonitor` | v1 |
-| x11 | `_NET_ACTIVE_WINDOW` via xcb or `bun:ffi` | XScreenSaver extension | v1.x |
+| x11 | `_NET_ACTIVE_WINDOW` over the X protocol (xgb) | MIT-SCREEN-SAVER extension | v1.x |
 | kde-wayland | KWin script that calls the daemon over D-Bus | `org.freedesktop.ScreenSaver` | v2 |
 | hyprland / sway | IPC socket events | `ext-idle-notify-v1` | v2 |
 
@@ -136,14 +136,14 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 | `event.reminder` | daemon → UI (notification) | `{kind: 'break' \| 'downtime' \| 'focus', message}` |
 
 - **GNOME extension → daemon:** D-Bus signal `io.github.<app>.Focus.FocusChanged(s appId, s title, u pid)`.
-- **Browser → daemon:** native messaging host (a small Bun script) that forwards `{domain, active}` to the socket.
+- **Browser → daemon:** native messaging host (`screentimed native-host`) that forwards `{domain, active}` to the socket after checking the socket belongs to the user.
 - **Versioning:** a `version` handshake on connect. The daemon rejects clients on a different major version.
 - **Single instance:** the daemon refuses to start if another is already listening on the socket (a second one would unlink it and both would write the same database).
 - **UI bridge:** the webview never opens the socket. The Electrobun main process owns the connection (with automatic reconnect), forwards only method names the daemon defines, and relays notifications. See [ADR 3](adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
 
 ## Wellbeing rules
 
-`apps/daemon/src/rules.ts`. Everything is derived from the database and the clock on each 5 s tick, never from long timers, so a suspend/resume can't make a rule miss or double-fire ([ADR 4](adr/0004-rules-are-derived-from-the-database-on-each-tick.md)).
+`internal/rules`. Everything is derived from the database and the clock on each 5 s tick, never from long timers, so a suspend/resume can't make a rule miss or double-fire ([ADR 4](adr/0004-rules-are-derived-from-the-database-on-each-tick.md)).
 
 - **Daily limits** (app, category or domain): fire once per day when usage passes `daily_ms`, with a notification and `event.limitHit`. `overlay`/`block` actions re-appear every 5 min while the user keeps using the target. v1 limits are nudges; nothing is closed or blocked. An optional `schedule` (`HH:MM-HH:MM`, may wrap midnight) restricts *enforcement* to a window; usage still counts for the whole day.
 - **Break reminders:** after `breakEveryMinutes` of continuous activity, at most every 10 min. Being away (idle, paused or suspended) for `breakLengthMinutes` counts as a break.
@@ -158,9 +158,10 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 
 ```
 /
+├─ cmd/screentimed/       # tracker daemon (Go) and `native-host` subcommand
+├─ internal/              # store, tracker, rules, rpc, focus providers, nativehost
 ├─ apps/
-│  ├─ desktop/            # Electrobun app (Svelte UI + tray)
-│  └─ daemon/             # tracker daemon, rules engine, RPC server
+│  └─ desktop/            # Electrobun app (Svelte UI + tray)
 ├─ adapters/
 │  ├─ gnome-extension/    # GJS Shell extension (focus → D-Bus)
 │  ├─ x11/
@@ -168,8 +169,7 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 ├─ extensions/
 │  └─ browser/            # WebExtension + native messaging host
 ├─ packages/
-│  ├─ shared/             # Zod schemas, RPC types, constants
-│  └─ db/                 # migrations, queries
+│  └─ shared/             # Zod schemas, RPC types, constants
 ├─ contract/              # frozen IPC contract: JSON Schema + golden fixtures
 ├─ packaging/             # systemd unit, .desktop, deb/AppImage scripts
 ├─ docs/                  # architecture, ADRs, adapter guide
@@ -178,17 +178,17 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 
 ## Roadmap
 
-> The daemon, native host and UI shell are moving to Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)). This document describes the current Bun/TypeScript implementation until each part is replaced.
+> The daemon and native host are Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)); the UI shell is still Electrobun until it moves to Wails.
 
 A phase starts only after the previous phase meets its exit criteria. **Status** is what has actually been verified, not just written.
 
 | Phase | Scope | Exit criteria | Status |
 | --- | --- | --- | --- |
-| 0. Spike | Electrobun hello world on Ubuntu; GNOME extension logs focus; D-Bus from Bun | Focus changes print in the daemon terminal | **Done.** Electrobun runs on Ubuntu 26.04/GNOME 50; D-Bus first used `dbus-next`, later replaced by `gdbus` (ADR 6) |
-| 1. Tracker | Daemon, GNOME adapter, idle, SQLite, systemd unit | 24 h of accurate sessions, daemon under 60 MB RSS | **Built and unit-tested.** Idle RSS 43 MB (was 62 MB with `dbus-next`); the 24 h soak has not been run |
+| 0. Spike | Electrobun hello world on Ubuntu; GNOME extension logs focus; D-Bus from the daemon | Focus changes print in the daemon terminal | **Done.** Electrobun runs on Ubuntu 26.04/GNOME 50; D-Bus first used `dbus-next`, later replaced by `gdbus` (ADR 6) |
+| 1. Tracker | Daemon, GNOME adapter, idle, SQLite, systemd unit | 24 h of accurate sessions, daemon under 60 MB RSS | **Built and unit-tested (Go).** Idle RSS ~10 MB in a sandbox with no desktop (it was 43 MB under Bun); the 24 h soak on a real session has not been run |
 | 2. Dashboard | Electrobun UI: today, week, per-app view, tray, pause | Totals match a manual check to within 1 min per hour | **Built.** Runs against the live daemon; the manual accuracy check has not been done |
 | 3. Wellbeing | Break reminders, daily limits (notify + overlay), downtime schedule, focus mode | Limits fire reliably across suspend/resume | **Built.** Suspend/resume covered with a fake clock; not yet exercised on a real suspend |
-| 4. Web + desktops | Browser extension, X11 adapter, categories | Per-site time works in Firefox and Chromium | **Built, not browser-tested.** Native host verified end to end; the extension itself has not been loaded in a real browser. X11 adapter unit-tested only (no X11 session available) |
+| 4. Web + desktops | Browser extension, X11 adapter, categories | Per-site time works in Firefox and Chromium | **Built, not browser-tested.** Native host verified end to end; the extension itself has not been loaded in a real browser. X11 provider integration-tested against Xvfb in CI, not yet on a real X11 session |
 | 5. v1.0 | .deb + AppImage, extension published on EGO, docs | Fresh install to tracking in under 5 min | **Partial.** `.deb` builds and its parts run; not installed system-wide. No AppImage; not on extensions.gnome.org |
 | 6. Later | KDE and wlroots adapters, privileged helper, CSV/JSON export | Driven by the community | Export done; the rest is open |
 
@@ -209,7 +209,7 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 | Electrobun is young; Linux tray and WebKitGTK may have quirks | UI bugs, blocked features | Keep the UI a thin client of the daemon; Tauri is the fallback shell |
 | GNOME Shell API changes each release | Extension breaks on upgrade | Keep the extension tiny (focus only); test on the current and previous GNOME |
 | Daemon can't reach the session bus | No focus or notifications | The `gdbus` tool is part of GLib and present on GNOME systems; the provider reports it as unavailable if missing |
-| Bun memory while idle | Heavy for an always-on service | A bare Bun process is ~14 MB; the daemon was 62 MB with `dbus-next`, now ~43 MB. Re-measure after a 24 h run; port the daemon to Rust if it stays over 60 MB |
+| Daemon memory while idle | Heavy for an always-on service | Was 43 MB under Bun; the Go daemon idled at ~10 MB in a sandbox with no desktop. Record the real-session number after the 24 h soak (`scripts/soak`) |
 | Users can bypass soft limits | Weak enforcement | Treat v1 as nudges; tamper resistance goes in the v2 privileged helper |
 
 - [x] Project name and app ID: `screentime` / `io.github.akkki007.screentime` (already used throughout)

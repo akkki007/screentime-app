@@ -10,18 +10,6 @@
         "typescript": "^5.6.3",
       },
     },
-    "apps/daemon": {
-      "name": "@screentime/daemon",
-      "version": "0.1.0",
-      "dependencies": {
-        "@screentime/db": "workspace:*",
-        "@screentime/shared": "workspace:*",
-        "zod": "^3.23.8",
-      },
-      "devDependencies": {
-        "typescript": "^5.6.3",
-      },
-    },
     "apps/desktop": {
       "name": "@screentime/desktop",
       "version": "0.1.0",
@@ -47,7 +35,6 @@
       "name": "@screentime/contract",
       "version": "0.1.0",
       "dependencies": {
-        "@screentime/db": "workspace:*",
         "@screentime/shared": "workspace:*",
         "zod": "^3.23.8",
       },
@@ -64,16 +51,6 @@
       },
       "devDependencies": {
         "@types/chrome": "^0.0.280",
-        "typescript": "^5.6.3",
-      },
-    },
-    "packages/db": {
-      "name": "@screentime/db",
-      "version": "0.1.0",
-      "dependencies": {
-        "@screentime/shared": "workspace:*",
-      },
-      "devDependencies": {
         "typescript": "^5.6.3",
       },
     },
@@ -226,10 +203,6 @@
     "@screentime/browser-extension": ["@screentime/browser-extension@workspace:extensions/browser"],
 
     "@screentime/contract": ["@screentime/contract@workspace:contract"],
-
-    "@screentime/daemon": ["@screentime/daemon@workspace:apps/daemon"],
-
-    "@screentime/db": ["@screentime/db@workspace:packages/db"],
 
     "@screentime/desktop": ["@screentime/desktop@workspace:apps/desktop"],
 

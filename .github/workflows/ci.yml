@@ -40,7 +40,6 @@ jobs:
       # workflow builds it. Here we check that every part still compiles.
       - name: Build
         run: |
-          bun run --cwd apps/daemon build
           bun run --cwd extensions/browser build
           bun run --cwd apps/desktop build:view
 
@@ -77,7 +76,7 @@ jobs:
         run: go tool govulncheck ./...
 
   contract-go:
-    name: Contract fixtures against the Go daemon
+    name: Contract fixtures against screentimed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -98,6 +97,6 @@ jobs:
       - name: Build screentimed
         run: go build -o bin/screentimed ./cmd/screentimed
 
-      # Same fixtures the Bun daemon is checked against (contract/README.md).
+      # The daemon's frozen IPC contract (contract/README.md).
       - name: Replay
-        run: CONTRACT_DAEMON_CMD="$PWD/bin/screentimed" CONTRACT_LOOSE_MESSAGES=1 bun test contract
+        run: CONTRACT_DAEMON_CMD="$PWD/bin/screentimed" bun test contract

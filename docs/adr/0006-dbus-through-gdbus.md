@@ -4,7 +4,7 @@ Date: 2026-10-01
 
 ## Status
 
-Accepted. Supersedes the `dbus-next` choice in `docs/architecture.md`.
+Superseded by [ADR 7](0007-migrate-to-go.md). The Go daemon talks to D-Bus through `godbus/dbus` on a persistent connection, with a real idle watch, so the `gdbus` subprocess and its polling are gone. Kept for the reasoning. It had superseded the `dbus-next` choice in `docs/architecture.md`.
 
 ## Context
 

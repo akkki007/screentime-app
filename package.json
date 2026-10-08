@@ -9,8 +9,9 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun test",
-    "dev:daemon": "bun run --cwd apps/daemon dev",
+    "test": "bun test apps packages extensions",
+    "test:contract": "go build -o bin/screentimed ./cmd/screentimed && bun test contract",
+    "dev:daemon": "go run ./cmd/screentimed",
     "dev:desktop": "bun run --cwd apps/desktop dev"
   },
   "devDependencies": {
