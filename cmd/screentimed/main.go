@@ -8,6 +8,9 @@
 //	SCREENTIME_DEBUG=1         log focus changes and browser reports
 //	SCREENTIME_FAKE_NOW        test hook: freeze the clock at this Unix ms
 //	                           (used by the contract fixtures in contract/)
+//
+// `screentimed native-host` (also what the screentime-native-host symlink
+// runs) is the browser extension's native-messaging host instead.
 package main
 
 import (
@@ -30,6 +33,13 @@ import (
 
 func main() {
 	log.SetFlags(0)
+	if isNativeHost(os.Args) {
+		if err := runNativeHost(); err != nil {
+			log.Printf("[native-host] %v", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(); err != nil {
 		log.Printf("[daemon] fatal error: %v", err)
 		os.Exit(1)

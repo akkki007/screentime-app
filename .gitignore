@@ -40,3 +40,6 @@ artifacts/
 
 # Go
 /bin/
+
+# Local Go builds
+/bin/

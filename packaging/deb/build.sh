@@ -5,7 +5,7 @@
 #   SKIP_UI_BUILD=1 packaging/deb/build.sh  reuse an existing apps/desktop/build
 #   NO_UI=1 packaging/deb/build.sh          daemon + extension only (no UI)
 #
-# Needs: bun, dpkg-deb, and (for the UI) the Hutch/Electrobun toolchain plus zstd.
+# Needs: bun, go, dpkg-deb, and (for the UI) the Hutch/Electrobun toolchain plus zstd.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -19,9 +19,8 @@ HOST_NAME="io.github.akkki007.screentime"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-# The daemon and the native host are minified JS bundles that share one Bun
-# runtime at /usr/lib/screentime/bun (the UI's own copy when it is included).
-# `bun build --compile` would embed a separate ~95 MB Bun in each of them.
+# The Bun daemon is a minified JS bundle that runs on the Bun runtime at
+# /usr/lib/screentime/bun (the UI's own copy when it is included).
 bundle() {
   bun build "$1" --target bun --minify --outfile "$STAGE/$2.tmp" >/dev/null
   { printf '#!/usr/lib/screentime/bun\n'; cat "$STAGE/$2.tmp"; } > "$STAGE/$2"
@@ -33,14 +32,18 @@ echo "==> daemon"
 install -d "$STAGE/usr/lib/screentime"
 bundle apps/daemon/src/index.ts usr/lib/screentime/daemon
 
-echo "==> browser native-messaging host"
-bundle extensions/browser/native-host/host.ts usr/lib/screentime/native-host
+echo "==> browser native-messaging host (screentimed native-host)"
+# Browsers launch the manifest's path with their own arguments, so it is a
+# symlink to screentimed, which recognises the link's name.
+install -d "$STAGE/usr/lib/screentime"
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$STAGE/usr/lib/screentime/screentimed" ./cmd/screentimed
+ln -s screentimed "$STAGE/usr/lib/screentime/screentime-native-host"
 install -d "$STAGE/usr/lib/mozilla/native-messaging-hosts"
 cat > "$STAGE/usr/lib/mozilla/native-messaging-hosts/$HOST_NAME.json" <<JSON
 {
   "name": "$HOST_NAME",
   "description": "Screentime: forwards the active tab domain to the local daemon",
-  "path": "/usr/lib/screentime/native-host",
+  "path": "/usr/lib/screentime/screentime-native-host",
   "type": "stdio",
   "allowed_extensions": ["screentime@akkki007.github.io"]
 }

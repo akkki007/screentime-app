@@ -11,7 +11,7 @@ The package contains:
 | Path | What |
 | --- | --- |
 | `/usr/lib/screentime/daemon` | the tracker, a minified Bun bundle (SQL migrations are embedded) |
-| `/usr/lib/screentime/native-host` | the browser native-messaging host, a minified Bun bundle |
+| `/usr/lib/screentime/screentimed`, `screentime-native-host` | the Go binary; the browser native-messaging host is `screentime-native-host`, a symlink to it |
 | `/usr/lib/screentime/bun` | the Bun runtime both run on: a symlink to the UI's copy (a copy of the build host's Bun with `NO_UI=1`) |
 | `/usr/lib/systemd/user/screentime-daemon.service` | the user unit, enabled for all users by `postinst` (`systemctl --global enable`) |
 | `/usr/share/gnome-shell/extensions/screentime-focus@akkki007.github.io/` | the focus extension |
@@ -29,4 +29,4 @@ The package builds with normalised file modes. Extracted (not installed) the pac
 - The UI is unpacked from Electrobun's archive rather than run through its launcher's own installer, which would otherwise install itself per user on first run.
 - The user unit avoids `ProtectSystem=`/`PrivateTmp=`: they need unprivileged user namespaces, which Ubuntu 24.04+ restricts. It keeps `RestrictAddressFamilies=AF_UNIX` and `NoNewPrivileges`, verified with a transient `systemd-run` unit.
 - The daemon and host are plain JS (~100 KB and ~65 KB) that share the UI's Bun runtime, instead of `bun build --compile` binaries that each embed their own ~95 MB copy. Electrobun's self-updater and uninstaller (`bspatch`, `zig-zstd`, `Resources/uninstall`, ~18 MB) are dropped since apt handles both. Together this took the package from 88 MB (300 MB installed) to 30 MB (86 MB installed).
-- Chromium-family native-messaging manifests need the extension ID, which isn't known until the extension is published, so only Firefox's is shipped; use `install:host` for Chromium.
+- Chromium-family native-messaging manifests need the extension ID, which isn't known until the extension is published, so only Firefox's is shipped; for Chromium-family browsers write a manifest whose `path` is `/usr/lib/screentime/screentime-native-host` (see the extension README).

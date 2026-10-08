@@ -7,6 +7,7 @@ toolchain go1.27.1
 require (
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/jezek/xgb v1.3.1
+	golang.org/x/sys v0.48.0
 	modernc.org/sqlite v1.60.1
 )
 
@@ -18,7 +19,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect
 	golang.org/x/tools v0.50.0 // indirect
 	golang.org/x/vuln v1.8.0 // indirect
