@@ -1,5 +1,5 @@
 {
-  "extends": "./.hutch/devkit/tsconfig.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
@@ -15,8 +15,8 @@
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["bun"]
+    "types": ["bun", "vite/client", "svelte"]
   },
   "include": ["src", "scripts"],
-  "exclude": ["node_modules", "dist", "build"]
+  "exclude": ["node_modules", "dist"]
 }

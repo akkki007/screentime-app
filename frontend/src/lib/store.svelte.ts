@@ -17,7 +17,7 @@ class Store {
   ready = $state(false);
   connected = $state(false);
   connectionError = $state<string | undefined>();
-  mode = $state<'electrobun' | 'mock'>('electrobun');
+  mode = $state<'app' | 'mock'>('app');
 
   view = $state<ViewId>('today');
   status = $state<TrackerStatus | undefined>();

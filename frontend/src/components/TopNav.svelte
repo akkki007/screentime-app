@@ -26,7 +26,7 @@ const state = $derived(
 );
 </script>
 
-<!-- Narrow windows (Electrobun has no minimum window size): the wordmark and
+<!-- Narrow windows (the window has a minimum size, but the panel can still be narrow): the wordmark and
      status text collapse first, then the brand mark and active label; below
      that the nav scrolls rather than overflowing the page. -->
 <header class="flex items-center justify-between gap-3 px-4 pt-6 sm:gap-4 sm:px-8">

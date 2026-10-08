@@ -10,7 +10,7 @@ import {
   type Limit,
   type Settings,
 } from '@screentime/shared';
-import type { ConnectionState } from '../../shared/bridge';
+import type { ConnectionState } from './bridge';
 import type { Bridge } from './bridge';
 import { addDays, dateKey, startOfDay } from './format';
 

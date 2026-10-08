@@ -4,15 +4,17 @@
   "version": "0.1.0",
   "description": "Local-first screentime and digital wellbeing tracker for Linux",
   "license": "GPL-3.0-or-later",
-  "workspaces": ["apps/*", "packages/*", "extensions/browser", "contract"],
+  "workspaces": ["frontend", "packages/*", "extensions/browser", "contract"],
   "scripts": {
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun test apps packages extensions",
+    "test": "bun test frontend packages extensions",
     "test:contract": "go build -o bin/screentimed ./cmd/screentimed && bun test contract",
     "dev:daemon": "go run ./cmd/screentimed",
-    "dev:desktop": "bun run --cwd apps/desktop dev"
+    "build:frontend": "bun run --cwd frontend build",
+    "build:app": "bun run build:frontend && go build -tags gtk3 -o bin/screentime ./cmd/screentime",
+    "dev:desktop": "bun run build:app && bin/screentime"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

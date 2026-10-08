@@ -35,11 +35,8 @@ packaging/appimage/*.AppImage
 # Test / coverage
 coverage/
 .cottontail-tmp/
-.hutch/
 artifacts/
 
 # Go
 /bin/
 
-# Local Go builds
-/bin/
