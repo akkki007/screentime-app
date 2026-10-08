@@ -146,7 +146,11 @@ func run(startHidden bool) error {
 	tray.OnClick(win.togglePanel)
 
 	lastIcon := ""
+	var refreshMu sync.Mutex
 	refreshUI = func() {
+		// Status, connection and the minute timer all refresh the tray.
+		refreshMu.Lock()
+		defer refreshMu.Unlock()
 		status, connected, today, appName := ui.snapshot(conn)
 		tray.SetTooltip(shell.TrayTitle(status, connected))
 		if name := shell.TrayIcon(status, connected); name != lastIcon {
