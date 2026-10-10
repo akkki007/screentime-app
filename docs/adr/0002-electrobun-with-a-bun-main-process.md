@@ -4,7 +4,7 @@ Date: 2026-10-01
 
 ## Status
 
-Accepted
+Superseded by [ADR 9](0009-wails-v3-ui-shell.md). The UI shell is Wails v3, with a Go main process, as decided in [ADR 7](0007-migrate-to-go.md). Kept for the reasoning.
 
 ## Context
 

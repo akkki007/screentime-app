@@ -57,8 +57,5 @@ export function buildHostManifest(
   return { ...base, allowed_origins: [`chrome-extension://${chromiumExtensionId}/`] };
 }
 
-/** The wrapper script browsers execute; they run with a minimal PATH, so bun is absolute. */
-export function hostWrapperScript(bunPath: string, hostScript: string): string {
-  const quote = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
-  return `#!/bin/sh\nexec ${quote(bunPath)} ${quote(hostScript)}\n`;
-}
+/** Name of the symlink to `screentimed` that browsers launch as the native host. */
+export const HOST_LINK_NAME = 'screentime-native-host';

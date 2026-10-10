@@ -20,7 +20,7 @@ An open-source, local-first screentime and digital wellbeing app for Linux: trac
 
 - **Local-only data.** Everything lives in `~/.local/share/screentime/`. Nothing is uploaded anywhere.
 - **No telemetry.** The daemon never makes a network call.
-- **Low idle footprint.** The tracker is a lightweight background service, not an Electron app running 24/7 (about 43 MB resident while idle).
+- **Low idle footprint.** The tracker is a single static Go binary of about 8 MB that idles around 10 MB resident, at about 0.03% of a CPU. The tray app is 37 MB while no window is open, and each window runs as its own process that gives everything back when you close it. An open dashboard is about 270 MB, nearly all of it WebKitGTK itself. (Measured on Ubuntu 26.04, GNOME on Wayland; see the [migration notes](docs/migration-to-go.md).) It is a background service, not an Electron app running 24/7.
 - **Pluggable per-desktop adapters.** GNOME Wayland and X11 now; KDE Wayland and wlroots compositors next.
 
 **Non-goals for v1:** cloud sync, mobile apps, multi-user parental controls. Limits are nudges, not locks: v1 never closes an app or blocks a site.
@@ -35,18 +35,19 @@ Mutter IdleMonitor ─────┼─ D-Bus ──> Tracker daemon (systemd -
 Browser extension ──────┘                    │
                                        Unix socket JSON-RPC
                                               │
-                                        Electrobun UI
+                                  Screentime app (Wails)
 ```
 
 ## Repo structure
 
 ```
-apps/desktop/          Electrobun app (Svelte UI + tray)
-apps/daemon/           tracker daemon, rules engine, RPC server
-adapters/              per-desktop focus/idle adapters (GNOME extension; X11 lives in the daemon)
+cmd/screentimed/       tracker daemon (Go): tracker, rules engine, RPC server, native host
+internal/              store, tracker, rules, rpc, focus providers, native host, UI shell core
+cmd/screentime/        desktop app (Go + Wails): tray, quick panel, dashboard window
+frontend/              the Svelte UI the app shows
+adapters/              per-desktop focus adapters that must run outside the daemon (GNOME extension)
 extensions/browser/    WebExtension + native messaging host
 packages/shared/       Zod schemas, RPC types, settings, categories
-packages/db/           SQLite migrations (embedded) and client
 contract/              frozen daemon IPC contract: JSON Schema + golden fixtures
 packaging/             systemd units, .desktop file, .deb build
 docs/                  architecture, ADRs, adapter guide
@@ -54,7 +55,7 @@ docs/                  architecture, ADRs, adapter guide
 
 ## Getting started
 
-Requires [Bun](https://bun.sh) >= 1.1 on Linux. Ubuntu with GNOME on Wayland is the reference setup.
+Requires [Go](https://go.dev/dl/) (the version in `go.mod`) and [Bun](https://bun.sh) >= 1.1 on Linux, plus `libwebkit2gtk-4.1-dev` and `libgtk-3-dev` to build the app. Ubuntu with GNOME on Wayland is the reference setup.
 
 ```bash
 bun install
@@ -63,28 +64,31 @@ bun install
 adapters/gnome-extension/install.sh
 
 # 2. Run the tracker (in the foreground, or as a systemd user service)
-bun run dev:daemon
-packaging/systemd/install-dev.sh          # alternative: start at login
+go run ./cmd/screentimed                  # or: bun run dev:daemon
+packaging/systemd/install-dev.sh          # alternative: build it and start at login
 
-# 3. Open the dashboard (first run downloads the Electrobun toolchain)
+# 3. Build and open the app (needs the two -dev packages above)
 bun run dev:desktop
 ```
 
-The dashboard also runs in a plain browser against demo data, with no daemon: `bun run --cwd apps/desktop hmr`, then open <http://localhost:5173>. See [`apps/desktop/README.md`](apps/desktop/README.md).
+The dashboard also runs in a plain browser against demo data, with no daemon: `bun run --cwd frontend hmr`, then open <http://localhost:5173>. See [`frontend/README.md`](frontend/README.md).
 
-For per-site time, install the [browser extension](extensions/browser/README.md). Optional on X11: `sudo apt install xprintidle` for idle detection.
+For per-site time, install the [browser extension](extensions/browser/README.md). Nothing else is needed on X11: focus and idle are read directly from the X server.
 
 To build a package: `packaging/deb/build.sh` (see [`packaging/deb`](packaging/deb/README.md)).
 
 ## Development
 
 ```bash
+go vet ./... && go test ./...          # the daemon
 bun run lint
 bun run typecheck
-bun test
+bun run test                           # UI and extension
+bun run build:app                      # frontend + the Wails app into bin/screentime
+bun run test:contract                  # builds screentimed, replays the IPC fixtures
 ```
 
-`SCREENTIME_DEBUG=1 bun run dev:daemon` logs focus, idle and pause events (never window titles unless you enabled them).
+`SCREENTIME_DEBUG=1 go run ./cmd/screentimed` logs focus, idle and pause events (never window titles unless you enabled them).
 
 ## Contributing
 

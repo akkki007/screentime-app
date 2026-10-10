@@ -1,9 +1,9 @@
 /**
- * Replays every fixture against a daemon (the Bun one by default, or
- * CONTRACT_DAEMON_CMD) and checks the generated schema is current.
+ * Replays every fixture against bin/screentimed (or CONTRACT_DAEMON_CMD) and
+ * checks the generated schema is current.
  *
- *   bun test contract
- *   CONTRACT_DAEMON_CMD="./screentimed" CONTRACT_LOOSE_MESSAGES=1 bun test contract
+ *   go build -o bin/screentimed ./cmd/screentimed && bun test contract
+ *   CONTRACT_STRICT_MESSAGES=1 bun test contract   # also compare error wording
  */
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { CATEGORIES_PATH, SCHEMA_PATH, renderCategories, renderSchema } from './
 import { compare, loadFixtures } from './fixture';
 import { SCENARIOS } from './scenarios';
 
-const looseMessages = process.env.CONTRACT_LOOSE_MESSAGES === '1';
+const looseMessages = process.env.CONTRACT_STRICT_MESSAGES !== '1';
 const fixtures = loadFixtures();
 
 /** Notifications the fixtures can't produce: they need a desktop session or the 5 s rules tick. */

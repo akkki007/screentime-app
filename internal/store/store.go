@@ -1,6 +1,6 @@
-// Package store opens the SQLite database and applies the migrations shared
-// with the Bun daemon (packages/db/migrations), tracked with PRAGMA
-// user_version, so either daemon can open the other's database.
+// Package store opens the SQLite database and applies the embedded
+// migrations (internal/store/migrations), tracked with PRAGMA user_version.
+// Databases created by the earlier Bun daemon open unchanged.
 package store
 
 import (
@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/akkki007/screentime-app/packages/db/migrations"
+	"github.com/akkki007/screentime-app/internal/store/migrations"
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 )
 

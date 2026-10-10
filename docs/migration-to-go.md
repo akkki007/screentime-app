@@ -30,7 +30,7 @@ Some components are written in whatever language the platform requires:
 | `adapters/gnome-extension` | GJS | GNOME Shell only loads JavaScript extensions |
 | `adapters/kwin-script` | JS | KWin scripting API |
 | `extensions/browser` | TypeScript | WebExtension APIs |
-| Svelte UI (`apps/desktop/src/mainview`) | TS/Svelte | Rendered in the system webview; kept as-is (see below) |
+| Svelte UI (`frontend/`) | TS/Svelte | Rendered in the system webview; kept as-is (see below) |
 
 "Fully Go" therefore means every process we run ourselves is Go: the daemon, the native messaging host, the UI's main process and the planner.
 
@@ -47,7 +47,7 @@ Some components are written in whatever language the platform requires:
 | IPC schemas | Zod | JSON Schema exported from Zod, Go structs | Fixtures keep both sides honest |
 | Native messaging host | Bun script | `screentimed native-host` subcommand | Same binary, no Bun at runtime |
 | Desktop shell | Electrobun | Wails | Go main process + system webview; the Svelte UI moves over largely unchanged |
-| Tray | Electrobun tray | Wails v3 tray, or a systray library on Wails v2 | Check Wails v3 release status before choosing |
+| Tray | Electrobun tray | Wails v3 tray (built in) | v3 is a beta; pinned at `3.0.0-beta.28`, see [ADR 9](adr/0009-wails-v3-ui-shell.md) |
 | Local model runtime | none | `llama-server` (llama.cpp) as a sidecar over localhost HTTP | No cgo bindings; also serves embeddings for categorisation |
 
 ### Why Wails and not a pure-Go UI toolkit
@@ -70,7 +70,7 @@ internal/rpc/           JSON-RPC server, version handshake
 internal/focus/         providers, one file per platform (build tags)
 internal/notify/        org.freedesktop.Notifications
 internal/planner/       AI planner (later)
-frontend/               current Svelte UI, moved from apps/desktop/src/mainview
+frontend/               the Svelte UI, moved from apps/desktop/src/mainview
 adapters/, extensions/  unchanged
 packaging/              updated for Go binaries
 ```
@@ -84,10 +84,10 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 | 0. Fix what survives | Fix the issues in code the migration keeps: CI hardening (#7), UI bugs (#8, #9, #10) | Issues closed |
 | 1. Freeze the contract | Export Zod schemas to JSON Schema; record golden request/response fixtures from the current daemon for every RPC method and event | **Done:** [`contract/`](../contract/README.md). Fixtures checked in and replayable against any daemon via `CONTRACT_DAEMON_CMD` |
 | 2. Go daemon (**done**, apart from a manual check of the GNOME extension) | Port `time.ts`, `tracker.ts` and `rules.ts` first (their unit tests also cover `event.focus`, `event.limitHit` and `event.reminder`, which the fixtures can't); then store, GNOME provider over godbus, X11, notifier, RPC server. Revise the GNOME extension's D-Bus interface together with the Go provider (#3) | All fixtures pass against `screentimed` (**done**, in CI, even with exact error messages); security requirements S1, S2, S6, S7, S8 met and tested (S1, S2, S7, S8 **done**; S6 done and tested on the Go side, the extension half awaiting a manual test in GNOME Shell) |
-| 3. Swap behind the old UI | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
-| 4. Native host | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
-| 5. Remove Bun daemon | Delete `apps/daemon` and `packages/db`; remove the GNOME extension's legacy broadcast mode; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
-| 6. UI shell | Move the Svelte UI into a Wails app; rewrite the bridge; tray and reconnect logic in Go | Feature parity with the Electrobun app; S4 and S5 met |
+| 3. Swap behind the old UI (**tooling done; hardware checks open**) | Run the existing Electrobun app against the Go daemon on the same socket | UI works unchanged; 24 h soak; RSS measured and recorded |
+| 4. Native host (**done**, browser check open) | Move `extensions/browser/native-host` into `screentimed native-host`; update the install script | Extension end to end with no Bun installed; S3 (client-side socket checks) met |
+| 5. Remove Bun daemon (**done**) | Delete `apps/daemon` and `packages/db`; remove the GNOME extension's legacy broadcast mode; update CI, systemd unit and `.deb` | CI green with Go tests only for the daemon |
+| 6. UI shell (**done**, tray and GNOME checks open) | Move the Svelte UI into a Wails app; rewrite the bridge; tray and reconnect logic in Go | Feature parity with the Electrobun app; S4 and S5 met |
 | 7. New work | Planner, then Windows and macOS providers | Tracked separately |
 
 ### Porting notes
@@ -111,6 +111,51 @@ Each step ends with something that runs. The Bun daemon stays in the repo until 
 
 First memory reading (12 s idle, `none` provider, same sandbox): `screentimed` **10 MB** RSS against **63 MB** for the Bun daemon run from source. The stripped binary is 7.8 MB. The proper measurement on a real session is still step 3's.
 
+### Status after steps 3 to 7
+
+What is done and what only a person on a real desktop can finish. Everything below "done" was exercised in a sandbox (private session bus, Xvfb with a window manager, a fake StatusNotifier watcher), not on GNOME.
+
+| Step | Done | Left for a real session |
+| --- | --- | --- |
+| 3 | `packaging/systemd/install-dev.sh` builds and installs `screentimed` as the user unit. `scripts/soak` samples RSS and checks the database for overlapping or inverted sessions. | Everything in the runbook below. |
+| 4 | `screentimed native-host`, S3 (`rpc.Dial`: ownership of the socket and its directory, then `SO_PEERCRED`), installer, `.deb` manifest. Tested end to end through a pipe into a running daemon. | Firefox and Chromium with the extension loaded, on a machine without Bun. |
+| 5 | Bun daemon, `packages/db` and the extension's legacy broadcast mode removed; migrations live in `internal/store/migrations`; unit, `.deb`, CI and docs updated; ADR 6 superseded. The contract fixtures pass against `screentimed` with no Bun daemon in the repo. | `dpkg -i` on a real machine. |
+| 6 | Wails v3 shell ([ADR 9](adr/0009-wails-v3-ui-shell.md)): dashboard, quick panel, tray menu, S3/S4/S5, minimum window size, single instance. | Tray clicks, panel position and transparency on GNOME with the AppIndicator extension. |
+| 7 | See below. | Anything needing macOS, Windows or a KDE session. |
+
+**Measured in the sandbox** (so ceilings or floors, not session numbers): `screentimed` idles at **10 MB** RSS (budget 60 MB; was 43 MB under Bun). The app holds **75 MB** PSS with only the tray, **~500 MB** with the dashboard open under software rendering (a bare Wails window is ~290 MB; the rest is WebKitGTK), and ~150 MB after the window is closed. The `.deb` is **6.7 MB** (19 MB installed), down from 30 MB (86 MB).
+
+**Measured on a real session** (Ubuntu 26.04, GNOME on Wayland, WebKitGTK 2.52.6, Mesa and NVIDIA, 2026-10-10; PSS, the figure that splits shared libraries fairly):
+
+| What | Result | Budget |
+| --- | --- | --- |
+| `screentimed`, idle | **10.6 MB** RSS, flat over 40 s; 0.03% CPU | 60 MB |
+| Tray, no window ever opened | 39 MB | |
+| Dashboard open | 268 MB (tray 27, window 95, WebKit web 126, network 15) | |
+| Dashboard opened, then closed, one process | 126 MB (the tray kept GL drivers and WebKit's UI code) | |
+| Dashboard opened, then closed, one process per window ([ADR 10](adr/0010-windows-run-as-their-own-processes.md)) | **37 MB** | |
+
+- The sandbox's "~75 MB with only the tray" and "~150 MB after the window is closed" were Xvfb figures. On a real session the tray alone was 39 MB, but closing the dashboard left 126 MB until the windows moved to their own processes.
+- Turning off GPU compositing, DMA-BUF or software rendering did not change the post-close number; JavaScriptCore's JIT off saves ~13 MB in the web process and is now the default in windows.
+- An open window costs what WebKitGTK costs. The page is already plain (no blur, backdrop filters or animations; ~220 KB of script).
+- `scripts/soak -verify-only` over the day's data: 159 sessions, 0 faults (no overlaps or inverted sessions). The one long gap (7 h 31 m) matches the machine being suspended.
+- The tray item registers with the AppIndicator watcher; the native host runs and exits cleanly with no Bun on `PATH`; the dashboard maps in ~0.3 s.
+- Not yet measured: the 24 h reading of `screentimed`'s RSS (the soak is the way), and clicks on the tray menu and quick panel position on GNOME, which a person has to do.
+
+#### Runbook for the on-hardware checks (issues #24, #25, #27, and #3)
+
+On Ubuntu with GNOME on Wayland, with `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, Go and Bun installed:
+
+1. `packaging/systemd/install-dev.sh`, then `systemctl --user status screentime-daemon` and `journalctl --user -u screentime-daemon -f`. Install the extension (`adapters/gnome-extension/install.sh`) and log out and in.
+2. `bun run dev:desktop`. Walk through Today, Trends, Apps, Limits, Wellbeing and Settings; pause and resume; focus mode; export (check `~/Downloads/*.csv` is `0600`); delete history and reset.
+3. With the AppIndicator extension enabled, check the tray icon states (tracking, paused, focus, offline), the tray menu, and that a click opens the quick panel. Close the dashboard: the app should stay in the tray. Disable AppIndicator and check that closing the window then quits the UI.
+4. Check the nudges: a limit (notification and overlay), a break reminder, downtime and a focus-mode nudge.
+5. Run the GNOME extension checklist in `adapters/gnome-extension/README.md` (closes #3).
+6. On a GNOME-on-Xorg session, check focus and idle with no `xprop` or `xprintidle` installed.
+7. Soak: `go run ./scripts/soak -for 24h -every 5m`, across suspend and resume, lock and unlock, and a daemon restart (`systemctl --user restart screentime-daemon`). It reports RSS and fails on overlapping sessions; read the gaps it lists against what you did. Compare today's total with a manual count (within 1 min per hour).
+8. Extension: `bun run --cwd extensions/browser build`, `install:host` for Firefox, load the extension, and check per-site time appears with no Bun on `PATH`. Repeat for Chromium with `--chromium-id`.
+9. Record the RSS numbers (start and after 24 h) here and in the README, then tick the boxes on #24, #25 and #27.
+
 ## Security requirements
 
 These come from the security review of the TypeScript code (issues #3–#7). Issues in code the migration replaces are **not** patched in TypeScript; they are fixed in the Go code, with a test for each, as part of the step named. If a release is cut before step 5, backport them to the Bun daemon first; each one is a few lines.
@@ -131,18 +176,18 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Behaviour drift during the rewrite | Wrong totals or limits firing differently | Golden fixtures from the Bun daemon; port the existing tests before porting the code |
-| Wails v3 maturity | Tray or Linux quirks | Check the release status first; the UI is a thin client, so the shell stays swappable |
+| Wails v3 maturity | Tray or Linux quirks | Pinned version; the UI is a thin client and the shell a thin layer over `internal/shell`, so it stays swappable |
 | cgo on macOS | Cross-compiling from Linux gets harder | Build macOS in CI on a macOS runner |
 | Two stacks during transition | More for contributors to set up | Keep the transition short; steps 2–5 are the critical path |
 | One-language promise changes | Contributors now need Go for the core and TS for the UI | Go is the core; TS is limited to the frontend and platform-mandated extensions |
 
 ## Open questions
 
-- [ ] Wails v2 or v3, depending on v3's status when step 6 starts
+- [x] Wails v2 or v3: **v3** (beta.28, `-tags gtk3`, pinned); see [ADR 9](adr/0009-wails-v3-ui-shell.md)
 - [x] ~~Generate Go types from `contract/schema/rpc.schema.json`, or write them by hand?~~ By hand: the contract fixtures check every field, and generated code from Zod's JSON Schema is awkward Go.
 - [ ] Should `architecture.md` and ADR 2 be updated in the same PR as the decision, or once the Go daemon reaches parity?
-- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.1` pinned in `go.mod`. CI reads both from there.
+- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.2` pinned in `go.mod`. CI reads both from there.
 
 ## Next step
 
-Step 0: fix #7, then the UI issues (#10 has a community PR, #11). Then start step 1. The open questions above should be settled before the step that needs them: Go version and type generation before step 2, Wails v2 or v3 before step 6.
+Run the runbook above on a real session, record the numbers, and close #3, #24, #25 and #27. Then step 7: the planner needs its ADR accepted first ([ADR 8](adr/0008-local-planner-sidecar.md)).

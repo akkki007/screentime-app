@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@screentime/db": "workspace:*",
     "@screentime/shared": "workspace:*",
     "zod": "^3.23.8"
   },
