@@ -125,12 +125,22 @@ What is done and what only a person on a real desktop can finish. Everything bel
 
 **Measured in the sandbox** (so ceilings or floors, not session numbers): `screentimed` idles at **10 MB** RSS (budget 60 MB; was 43 MB under Bun). The app holds **75 MB** PSS with only the tray, **~500 MB** with the dashboard open under software rendering (a bare Wails window is ~290 MB; the rest is WebKitGTK), and ~150 MB after the window is closed. The `.deb` is **6.7 MB** (19 MB installed), down from 30 MB (86 MB).
 
-**Measured on a real session** (Ubuntu 26.04, GNOME on Wayland, WebKitGTK 2.52.6, 2026-10-10):
+**Measured on a real session** (Ubuntu 26.04, GNOME on Wayland, WebKitGTK 2.52.6, Mesa and NVIDIA, 2026-10-10; PSS, the figure that splits shared libraries fairly):
 
-- `screentimed` idles at **10.6 MB** RSS, flat over a 40 s sample (budget 60 MB). The 24 h reading is still to come.
-- The app with the dashboard open holds about **255 MB** PSS (shell 101, WebKit web process 138, WebKit network process 16), against ~500 MB under Xvfb software rendering. This is the number to bring down before calling the app lightweight; the daemon is not the cost.
+| What | Result | Budget |
+| --- | --- | --- |
+| `screentimed`, idle | **10.6 MB** RSS, flat over 40 s; 0.03% CPU | 60 MB |
+| Tray, no window ever opened | 39 MB | |
+| Dashboard open | 268 MB (tray 27, window 95, WebKit web 126, network 15) | |
+| Dashboard opened, then closed, one process | 126 MB (the tray kept GL drivers and WebKit's UI code) | |
+| Dashboard opened, then closed, one process per window ([ADR 10](adr/0010-windows-run-as-their-own-processes.md)) | **37 MB** | |
+
+- The sandbox's "~75 MB with only the tray" and "~150 MB after the window is closed" were Xvfb figures. On a real session the tray alone was 39 MB, but closing the dashboard left 126 MB until the windows moved to their own processes.
+- Turning off GPU compositing, DMA-BUF or software rendering did not change the post-close number; JavaScriptCore's JIT off saves ~13 MB in the web process and is now the default in windows.
+- An open window costs what WebKitGTK costs. The page is already plain (no blur, backdrop filters or animations; ~220 KB of script).
 - `scripts/soak -verify-only` over the day's data: 159 sessions, 0 faults (no overlaps or inverted sessions). The one long gap (7 h 31 m) matches the machine being suspended.
-- The tray item registers with the AppIndicator watcher, and the native host runs and exits cleanly with no Bun on `PATH`. Clicks, the quick panel's position and transparency, and a real browser are still to be checked by hand.
+- The tray item registers with the AppIndicator watcher; the native host runs and exits cleanly with no Bun on `PATH`; the dashboard maps in ~0.3 s.
+- Not yet measured: the 24 h reading of `screentimed`'s RSS (the soak is the way), and clicks on the tray menu and quick panel position on GNOME, which a person has to do.
 
 #### Runbook for the on-hardware checks (issues #24, #25, #27, and #3)
 

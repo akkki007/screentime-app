@@ -4,7 +4,7 @@ Date: 2026-10-08
 
 ## Status
 
-Accepted. Supersedes [ADR 2](0002-electrobun-with-a-bun-main-process.md) (Electrobun with a Bun main process) and updates [ADR 3](0003-ui-reaches-the-daemon-through-its-main-process.md) (the main process is now Go).
+Accepted. Refined by [ADR 10](0010-windows-run-as-their-own-processes.md): windows now run as their own processes, because creating them on demand in the tray's process did not give the memory back. Supersedes [ADR 2](0002-electrobun-with-a-bun-main-process.md) (Electrobun with a Bun main process) and updates [ADR 3](0003-ui-reaches-the-daemon-through-its-main-process.md) (the main process is now Go).
 
 ## Context
 

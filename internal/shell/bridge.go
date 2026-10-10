@@ -29,7 +29,9 @@ type Bridge struct {
 	// OpenDashboard, Quit and Reveal are provided by the app shell.
 	OpenDashboardFn func()
 	QuitFn          func()
-	RevealFn        func(path string)
+	// CloseFn closes the window the call came from.
+	CloseFn  func()
+	RevealFn func(path string)
 }
 
 // Daemon forwards one allow-listed JSON-RPC call.
@@ -54,6 +56,14 @@ func (b *Bridge) OpenDashboard() {
 func (b *Bridge) Quit() {
 	if b.QuitFn != nil {
 		b.QuitFn()
+	}
+}
+
+// CloseWindow closes the window this call came from (Escape in the quick
+// panel). The tray and the daemon are untouched.
+func (b *Bridge) CloseWindow() {
+	if b.CloseFn != nil {
+		b.CloseFn()
 	}
 }
 

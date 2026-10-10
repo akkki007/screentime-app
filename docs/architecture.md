@@ -41,7 +41,7 @@ The daemon and native host are Go; the dashboard, browser extension and shared s
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| Desktop shell | Wails v3 (WebKitGTK 4.1 via `-tags gtk3`, Go main process) | Tray, attached panel window and multiple windows built in; one 10 MB binary; see [ADR 9](adr/0009-wails-v3-ui-shell.md) |
+| Desktop shell | Wails v3 (WebKitGTK 4.1 via `-tags gtk3`, Go): a tray process, and one short-lived process per window | Tray and multiple windows built in; one 10 MB binary; a closed window gives all its memory back; see [ADR 9](adr/0009-wails-v3-ui-shell.md), [ADR 10](adr/0010-windows-run-as-their-own-processes.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
 | Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
 | Daemon | Go (`cmd/screentimed`) | One small static binary (~8 MB, ~10 MB idle); build tags for per-OS providers |
@@ -139,7 +139,7 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 - **Browser → daemon:** native messaging host (`screentimed native-host`) that forwards `{domain, active}` to the socket after checking the socket belongs to the user.
 - **Versioning:** a `version` handshake on connect. The daemon rejects clients on a different major version.
 - **Single instance:** the daemon refuses to start if another is already listening on the socket (a second one would unlink it and both would write the same database).
-- **UI bridge:** the webview never opens the socket. The Go main process owns the connection (`internal/shell`, with automatic reconnect and S3 ownership checks), forwards only the UI's allow-listed method names, and relays notifications. See [ADR 3](adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
+- **UI bridge:** the webview never opens the socket. The Go shell owns the connection, in the tray and in each window process (`internal/shell`, with automatic reconnect and S3 ownership checks), forwards only the UI's allow-listed method names, and relays notifications. See [ADR 3](adr/0003-ui-reaches-the-daemon-through-its-main-process.md).
 
 ## Wellbeing rules
 
@@ -178,7 +178,7 @@ One monorepo using Bun workspaces. Each package can be built and tested on its o
 
 ## Roadmap
 
-> The daemon and native host are Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)); the UI shell is Wails v3 ([ADR 9](adr/0009-wails-v3-ui-shell.md)).
+> The daemon and native host are Go ([ADR 7](adr/0007-migrate-to-go.md), [migration notes](migration-to-go.md)); the UI shell is Wails v3 ([ADR 9](adr/0009-wails-v3-ui-shell.md)), with each window in its own process ([ADR 10](adr/0010-windows-run-as-their-own-processes.md)).
 
 A phase starts only after the previous phase meets its exit criteria. **Status** is what has actually been verified, not just written.
 

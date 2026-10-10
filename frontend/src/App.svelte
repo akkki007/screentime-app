@@ -4,7 +4,7 @@ import Onboarding from './components/Onboarding.svelte';
 import QuickPanel from './components/QuickPanel.svelte';
 import Toasts from './components/Toasts.svelte';
 import TopNav from './components/TopNav.svelte';
-import { setBridge } from './lib/api';
+import { getBridge, setBridge } from './lib/api';
 import { createBridge } from './lib/bridge';
 import { type ViewId, errorMessage, store } from './lib/store.svelte';
 import AppsView from './views/AppsView.svelte';
@@ -15,6 +15,11 @@ import WeekView from './views/WeekView.svelte';
 import WellbeingView from './views/WellbeingView.svelte';
 
 let fatal = $state<string>();
+
+/** Escape closes the quick panel, as it would a popover. */
+function onKey(e: KeyboardEvent) {
+  if (widget && e.key === 'Escape') void getBridge().closeWindow();
+}
 const widget = location.hash === '#widget';
 if (widget) {
   document.documentElement.dataset.view = 'widget';
@@ -62,6 +67,8 @@ const needsOnboarding = $derived(
   store.connected && store.settings !== undefined && !store.settings.onboardingDone,
 );
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 {#if fatal}
 	<main class="grid h-full place-items-center p-8">

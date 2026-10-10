@@ -20,7 +20,7 @@ An open-source, local-first screentime and digital wellbeing app for Linux: trac
 
 - **Local-only data.** Everything lives in `~/.local/share/screentime/`. Nothing is uploaded anywhere.
 - **No telemetry.** The daemon never makes a network call.
-- **Low idle footprint.** The tracker is a single static Go binary of about 8 MB that idles around 10 MB resident (measured in a sandbox with no desktop session; the real-session number is still to be recorded, see the [migration notes](docs/migration-to-go.md)). It is a background service, not an Electron app running 24/7.
+- **Low idle footprint.** The tracker is a single static Go binary of about 8 MB that idles around 10 MB resident, at about 0.03% of a CPU. The tray app is 37 MB while no window is open, and each window runs as its own process that gives everything back when you close it. An open dashboard is about 270 MB, nearly all of it WebKitGTK itself. (Measured on Ubuntu 26.04, GNOME on Wayland; see the [migration notes](docs/migration-to-go.md).) It is a background service, not an Electron app running 24/7.
 - **Pluggable per-desktop adapters.** GNOME Wayland and X11 now; KDE Wayland and wlroots compositors next.
 
 **Non-goals for v1:** cloud sync, mobile apps, multi-user parental controls. Limits are nudges, not locks: v1 never closes an app or blocks a site.

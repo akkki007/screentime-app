@@ -15,6 +15,8 @@ export type Bridge = {
   }>;
   openDashboard(): Promise<void>;
   quitApp(): Promise<void>;
+  /** Closes this window only; the tray and the daemon keep running. */
+  closeWindow(): Promise<void>;
   connection(): Promise<ConnectionState>;
   onEvent(handler: (name: string, payload: unknown) => void): void;
   onConnection(handler: (state: ConnectionState) => void): void;
@@ -55,6 +57,7 @@ export async function createBridge(): Promise<Bridge> {
     saveExport: ({ format, from, to }) => call('SaveExport', format, from ?? null, to ?? null),
     openDashboard: async () => void (await call('OpenDashboard')),
     quitApp: async () => void (await call('Quit')),
+    closeWindow: async () => void (await call('CloseWindow')),
     connection: () => call('ConnectionState'),
     onEvent: (h) => {
       eventHandler = h;

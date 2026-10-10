@@ -1,9 +1,14 @@
 //go:build gtk3
 
 // Command screentime is the desktop app: a Wails shell around the Svelte UI
-// in frontend/. The Go main process owns the connection to the daemon (ADR 3),
-// the tray, and the two windows (the dashboard and the quick panel); the
+// in frontend/. The Go side owns the connection to the daemon (ADR 3); the
 // webview never opens the daemon socket.
+//
+// It runs as two kinds of process (ADR 10). The tray process holds the tray
+// and the status in its menu and never creates a webview. Each window, the
+// dashboard and the quick panel, is its own `screentime -window <kind>`
+// process that exits when the window closes, so an idle app costs about what
+// the tray costs and closing a window gives back everything it loaded.
 //
 // Environment:
 //
@@ -16,16 +21,24 @@
 //	                                 drivers that show a blank window
 //	SCREENTIME_OPEN_PANEL=1          open the quick panel at startup (a dev aid:
 //	                                 a script can't click the tray)
+//	SCREENTIME_JIT=1                 keep JavaScriptCore's JIT on in the windows.
+//	                                 It is off by default: it saves ~13 MB and a
+//	                                 dashboard this size doesn't need it.
 package main
 
 import (
 	"embed"
 	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
+	"os/exec"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/akkki007/screentime-app/frontend"
@@ -43,8 +56,18 @@ const appID = "io.github.akkki007.screentime"
 func main() {
 	log.SetFlags(0)
 	hidden := flag.Bool("hidden", false, "start in the tray only (for autostart)")
+	window := flag.String("window", "", "internal: run one window, \"main\" or \"panel\", as its own process")
 	flag.Parse()
-	if err := run(*hidden); err != nil {
+	var err error
+	switch *window {
+	case "":
+		err = run(*hidden)
+	case "main", "panel":
+		err = runWindow(*window)
+	default:
+		err = fmt.Errorf("unknown window %q", *window)
+	}
+	if err != nil {
 		log.Fatalf("[screentime] %v", err)
 	}
 }
@@ -57,6 +80,7 @@ func icon(name string) []byte {
 	return b
 }
 
+// run is the tray process.
 func run(startHidden bool) error {
 	dist, err := fs.Sub(frontend.Dist, "dist")
 	if err != nil {
@@ -65,20 +89,36 @@ func run(startHidden bool) error {
 	if _, err := fs.Stat(dist, "index.html"); err != nil {
 		return &buildError{}
 	}
-
-	gpu := application.WebviewGpuPolicyOnDemand
-	if os.Getenv("SCREENTIME_SOFTWARE_RENDERING") == "1" {
-		gpu = application.WebviewGpuPolicyNever
+	exe, err := os.Executable()
+	if err != nil {
+		return err
 	}
 
 	trayHost := shell.TrayHostAvailable()
-	win := &windows{trayHost: trayHost, gpu: gpu, keepPanel: os.Getenv("SCREENTIME_OPEN_PANEL") == "1"}
+	keepPanel := os.Getenv("SCREENTIME_OPEN_PANEL") == "1"
 	var (
 		app       *application.App
 		ui        = &uiState{names: map[string]string{}}
 		conn      *shell.Conn
 		refreshUI func()
 	)
+	win := &shell.Windows{
+		Exe:  exe,
+		Args: func(kind string) []string { return []string{"-window", kind} },
+		OnExit: func(kind string) {
+			// Without a tray to come back from, closing the dashboard quits.
+			if kind == "main" && !trayHost {
+				app.Quit()
+			}
+		},
+	}
+	open := func(kind string, f func(string) error) {
+		if err := f(kind); err != nil {
+			log.Printf("[screentime] opening the %s window: %v", kind, err)
+		}
+	}
+	openMain := func() { open("main", win.Open) }
+	togglePanel := func() { open("panel", win.Toggle) }
 
 	conn = shell.NewConn(shell.Options{
 		OnNotification: func(method string, params json.RawMessage) {
@@ -90,7 +130,6 @@ func run(startHidden bool) error {
 					go ui.refreshToday(conn, refreshUI)
 				}
 			}
-			app.Event.Emit("daemon:event", map[string]any{"name": method, "payload": params})
 		},
 		OnState: func(s shell.State) {
 			ui.setConnected(s.Connected)
@@ -106,44 +145,33 @@ func run(startHidden bool) error {
 				go ui.refreshToday(conn, refreshUI)
 			}
 			refreshUI()
-			app.Event.Emit("daemon:connection", s)
 		},
 	})
-
-	bridge := &shell.Bridge{
-		Conn: conn,
-		OpenDashboardFn: func() {
-			win.closePanel()
-			win.openMain()
-		},
-		QuitFn:   func() { app.Quit() },
-		RevealFn: shell.Reveal,
-	}
 
 	app = application.New(application.Options{
 		Name:        "Screentime",
 		Description: "Local-first screentime and digital wellbeing",
 		Icon:        icon("tray"),
-		Services:    []application.Service{application.NewService(bridge)},
-		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(dist)},
 		Linux: application.LinuxOptions{
-			ApplicationID: appID,
-			ProgramName:   appID,
-			// The tray keeps the app alive with every window closed.
+			ApplicationID: appID + ".Tray",
+			ProgramName:   appID + ".Tray",
+			// The tray keeps the app alive with no window open.
 			DisableQuitOnLastWindowClosed: true,
 		},
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID:               appID,
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) { win.openMain() },
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) { openMain() },
 		},
-		OnShutdown: func() { conn.Stop() },
+		OnShutdown: func() {
+			win.CloseAll()
+			conn.Stop()
+		},
 	})
-	win.app = app
+	quitOnSignal(app)
 
 	tray := app.SystemTray.New()
 	tray.SetIcon(icon("tray"))
-	win.tray = tray
-	tray.OnClick(win.togglePanel)
+	tray.OnClick(togglePanel)
 
 	lastIcon := ""
 	var refreshMu sync.Mutex
@@ -171,21 +199,21 @@ func run(startHidden bool) error {
 			}
 			mi := menu.Add(item.Label).SetEnabled(!item.Disabled)
 			if action, ok := shell.ParseAction(item.Action); ok {
-				mi.OnClick(func(*application.Context) { handleAction(app, conn, win, action) })
+				mi.OnClick(func(*application.Context) {
+					handleAction(app, conn, action, openMain, togglePanel)
+				})
 			}
 		}
 		tray.SetMenu(menu)
 	}
 	refreshUI()
 	conn.Start()
-	// A tray-resident app holds no webview while idle: windows are created
-	// when they are opened and destroyed when they are closed.
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 		if !startHidden || !trayHost {
-			win.openMain()
+			openMain()
 		}
-		if win.keepPanel {
-			win.togglePanel()
+		if keepPanel {
+			togglePanel()
 		}
 	})
 	go func() {
@@ -197,119 +225,205 @@ func run(startHidden bool) error {
 	return app.Run()
 }
 
-// windows creates the dashboard and the quick panel on demand.
-type windows struct {
-	app       *application.App
-	tray      *application.SystemTray
-	trayHost  bool
-	gpu       application.WebviewGpuPolicy
-	keepPanel bool // dev aid: don't close the panel when it loses focus
-
-	mu    sync.Mutex
-	main  *application.WebviewWindow
-	panel *application.WebviewWindow
+// quitOnSignal makes SIGTERM and SIGINT a normal quit, so the tray closes its
+// windows and the daemon connection instead of dying mid-write.
+func quitOnSignal(app *application.App) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sig
+		app.Quit()
+	}()
 }
 
-func (w *windows) openMain() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.main != nil {
-		w.main.Show()
-		w.main.Restore()
-		w.main.Focus()
-		return
+// runWindow is one window's process: the dashboard or the quick panel. It
+// exits when its window closes, and with it everything WebKit loaded.
+func runWindow(kind string) error {
+	dist, err := fs.Sub(frontend.Dist, "dist")
+	if err != nil {
+		return err
 	}
-	created := w.app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:      "main",
-		Title:     "Screentime",
-		URL:       "/",
-		Width:     1120,
-		Height:    780,
-		MinWidth:  760,
-		MinHeight: 560,
-		Linux:     application.LinuxWindow{WebviewGpuPolicy: w.gpu},
+	if _, err := fs.Stat(dist, "index.html"); err != nil {
+		return &buildError{}
+	}
+	if os.Getenv("SCREENTIME_JIT") != "1" && os.Getenv("JSC_useJIT") == "" {
+		// Read by the WebKit web process, which inherits our environment.
+		_ = os.Setenv("JSC_useJIT", "false")
+	}
+	gpu := application.WebviewGpuPolicyOnDemand
+	if os.Getenv("SCREENTIME_SOFTWARE_RENDERING") == "1" {
+		gpu = application.WebviewGpuPolicyNever
+	}
+	// Started by the tray, stdin is a pipe from it: when that closes the tray
+	// is gone (even if it was killed) and so is this window.
+	fromTray := os.Getenv(shell.ParentPipeEnv) == "1"
+	trayPID := os.Getppid()
+
+	var app *application.App
+	conn := shell.NewConn(shell.Options{
+		OnNotification: func(method string, params json.RawMessage) {
+			app.Event.Emit("daemon:event", map[string]any{"name": method, "payload": params})
+		},
+		OnState: func(s shell.State) { app.Event.Emit("daemon:connection", s) },
 	})
-	created.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
-		w.mu.Lock()
-		if w.main == created {
-			w.main = nil
-		}
-		w.mu.Unlock()
-		// Without a tray to come back from, closing the window quits the UI.
-		if !w.trayHost {
-			w.app.Quit()
-		}
+
+	var mainWindow *application.WebviewWindow
+	bridge := &shell.Bridge{
+		Conn: conn,
+		OpenDashboardFn: func() {
+			if kind == "main" {
+				if mainWindow != nil {
+					mainWindow.Show()
+					mainWindow.Restore()
+					mainWindow.Focus()
+				}
+				return
+			}
+			// The tray owns the dashboard process: reaching it through its
+			// single instance lock asks it to open one.
+			if err := pokeTray(); err != nil {
+				log.Printf("[screentime] opening the dashboard: %v", err)
+			}
+			app.Quit()
+		},
+		QuitFn: func() {
+			// "Exit Screentime" quits the whole UI, not just this window.
+			if fromTray {
+				_ = syscall.Kill(trayPID, syscall.SIGTERM)
+			}
+			app.Quit()
+		},
+		CloseFn:  func() { app.Quit() },
+		RevealFn: shell.Reveal,
+	}
+
+	id := appID + ".Dashboard"
+	if kind == "panel" {
+		id = appID + ".Panel"
+	}
+	app = application.New(application.Options{
+		Name:        "Screentime",
+		Description: "Local-first screentime and digital wellbeing",
+		Icon:        icon("tray"),
+		Services:    []application.Service{application.NewService(bridge)},
+		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(dist)},
+		Linux: application.LinuxOptions{
+			// Windows keep the app id of the app itself, so GNOME matches
+			// them to its launcher and icon.
+			ApplicationID: appID,
+			ProgramName:   appID,
+		},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: id,
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if kind == "main" && mainWindow != nil {
+					mainWindow.Show()
+					mainWindow.Restore()
+					mainWindow.Focus()
+				}
+			},
+		},
+		OnShutdown: func() { conn.Stop() },
 	})
-	w.main = created
+	quitOnSignal(app)
+	if fromTray {
+		go func() {
+			_, _ = io.Copy(io.Discard, os.Stdin)
+			app.Quit()
+		}()
+	}
+
+	switch kind {
+	case "main":
+		mainWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
+			Name:      "main",
+			Title:     "Screentime",
+			URL:       "/",
+			Width:     1120,
+			Height:    780,
+			MinWidth:  760,
+			MinHeight: 560,
+			Linux:     application.LinuxWindow{WebviewGpuPolicy: gpu},
+		})
+	case "panel":
+		openPanel(app, gpu)
+	}
+	conn.Start()
+	return app.Run()
 }
 
-// togglePanel opens the quick panel: a small frameless window, the nearest
+// openPanel creates the quick panel: a small frameless window, the nearest
 // thing to a popover that a tray icon allows (its own menu can't be styled).
-// It closes when it loses focus or on Escape. Wayland compositors ignore
-// requested positions, so on GNOME it appears where the shell puts it.
-func (w *windows) togglePanel() {
-	w.mu.Lock()
-	if w.panel != nil {
-		panel := w.panel
-		w.mu.Unlock()
-		panel.Close()
-		return
-	}
-	linux := application.LinuxWindow{WebviewGpuPolicy: w.gpu, WindowIsTranslucent: true}
-	created := w.app.Window.NewWithOptions(application.WebviewWindowOptions{
+// It closes when it loses focus. Wayland compositors ignore requested
+// positions, so on GNOME it appears where the shell puts it; elsewhere it
+// goes to the top right, where the tray is.
+func openPanel(app *application.App, gpu application.WebviewGpuPolicy) {
+	const width, height, inset = 372, 624, 8
+	panel := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "panel",
 		Title:            "Screentime quick panel",
 		URL:              "/#widget",
-		Width:            372,
-		Height:           624,
+		Width:            width,
+		Height:           height,
 		Frameless:        true,
 		AlwaysOnTop:      true,
 		DisableResize:    true,
-		HideOnEscape:     false,
 		BackgroundType:   application.BackgroundTypeTransparent,
 		BackgroundColour: application.NewRGBA(0, 0, 0, 0),
-		Linux:            linux,
+		Linux:            application.LinuxWindow{WebviewGpuPolicy: gpu, WindowIsTranslucent: true},
 	})
-	w.panel = created
-	w.mu.Unlock()
-
-	created.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
-		w.mu.Lock()
-		if w.panel == created {
-			w.panel = nil
+	if screen := app.Screen.GetPrimary(); screen != nil {
+		area := screen.WorkArea
+		if area.Width == 0 {
+			area = screen.Bounds
 		}
-		w.mu.Unlock()
+		panel.SetPosition(area.X+area.Width-width-inset, area.Y+inset)
+	}
+	if os.Getenv("SCREENTIME_OPEN_PANEL") == "1" {
+		return // dev aid: stay open
+	}
+	openedAt := time.Now()
+	panel.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
+		// Ignore the focus churn while the window is still being mapped.
+		if time.Since(openedAt) > 700*time.Millisecond {
+			panel.Close()
+		}
 	})
-	if !w.keepPanel {
-		openedAt := time.Now()
-		created.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
-			// Ignore the focus churn while the window is still being mapped.
-			if time.Since(openedAt) > 700*time.Millisecond {
-				created.Close()
-			}
-		})
-	}
-	if w.tray != nil {
-		_ = w.tray.PositionWindow(created, 8)
-	}
 }
 
-func (w *windows) closePanel() {
-	w.mu.Lock()
-	panel := w.panel
-	w.mu.Unlock()
-	if panel != nil {
-		panel.Close()
+// pokeTray runs `screentime` with no arguments: the running tray takes it as
+// a second launch and opens the dashboard; with no tray it starts one.
+func pokeTray() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
 	}
+	cmd := exec.Command(exe)
+	cmd.Env = withoutEnv(os.Environ(), shell.ParentPipeEnv)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
 }
 
-func handleAction(app *application.App, conn *shell.Conn, win *windows, a shell.Action) {
+func withoutEnv(env []string, name string) []string {
+	out := env[:0:0]
+	for _, kv := range env {
+		if len(kv) > len(name) && kv[:len(name)] == name && kv[len(name)] == '=' {
+			continue
+		}
+		out = append(out, kv)
+	}
+	return out
+}
+
+func handleAction(app *application.App, conn *shell.Conn, a shell.Action, openMain, togglePanel func()) {
 	var err error
 	switch a.Kind {
 	case "open":
-		win.openMain()
+		openMain()
 	case "widget":
-		win.togglePanel()
+		togglePanel()
 	case "pause":
 		_, err = conn.Call("tracker.pause", map[string]int{"minutes": a.Minutes})
 	case "resume":
