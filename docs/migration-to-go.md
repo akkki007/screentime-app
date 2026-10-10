@@ -186,7 +186,7 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 - [x] Wails v2 or v3: **v3** (beta.28, `-tags gtk3`, pinned); see [ADR 9](adr/0009-wails-v3-ui-shell.md)
 - [x] ~~Generate Go types from `contract/schema/rpc.schema.json`, or write them by hand?~~ By hand: the contract fixtures check every field, and generated code from Zod's JSON Schema is awkward Go.
 - [ ] Should `architecture.md` and ADR 2 be updated in the same PR as the decision, or once the Go daemon reaches parity?
-- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.1` pinned in `go.mod`. CI reads both from there.
+- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.2` pinned in `go.mod`. CI reads both from there.
 
 ## Next step
 
