@@ -73,7 +73,7 @@ type FocusedWindow = { appId: string; title?: string; pid?: number; ts: number }
 | --- | --- | --- | --- |
 | gnome-wayland | Own Shell extension that emits `FocusChanged` on the session bus | `org.gnome.Mutter.IdleMonitor` | v1 |
 | x11 | `_NET_ACTIVE_WINDOW` over the X protocol (xgb) | MIT-SCREEN-SAVER extension | v1.x |
-| kde-wayland | KWin script that calls the daemon over D-Bus | `org.freedesktop.ScreenSaver` | v2 |
+| kde-wayland | KWin script that calls the daemon over D-Bus ([ADR 11](adr/0011-kde-wayland-adapter.md)) | `ext-idle-notify-v1` | v2, implemented |
 | hyprland / sway | IPC socket events | `ext-idle-notify-v1` | v2 |
 
 - **App identity:** `appId` = the `.desktop` file ID (e.g. `org.mozilla.firefox`), with WM\_CLASS as the fallback. Icons and names come from the `.desktop` files.

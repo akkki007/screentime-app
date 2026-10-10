@@ -81,6 +81,7 @@ func run() error {
 	dirs := apps.ApplicationDirs()
 	candidates := []focus.Provider{
 		&focus.Gnome{Now: now},
+		&focus.KDE{Now: now},
 		&focus.X11{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
 	}
 	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), candidates)

@@ -14,6 +14,7 @@ The package contains:
 | `/usr/lib/screentime/screentime-native-host` | the browser native-messaging host: a symlink to `screentimed`, which runs as the host when started under that name |
 | `/usr/lib/systemd/user/screentime-daemon.service` | the user unit, enabled for all users by `postinst` (`systemctl --global enable`) |
 | `/usr/share/gnome-shell/extensions/screentime-focus@akkki007.github.io/` | the focus extension |
+| `/usr/share/kwin/scripts/screentime/` | the KWin script (KDE Plasma) |
 | `/usr/bin/screentime` | the desktop app: one Go binary with the Svelte UI embedded, built with `-tags gtk3,production`. Needs `libwebkit2gtk-4.1-0` and `libgtk-3-0` |
 | `/usr/lib/mozilla/native-messaging-hosts/…json` | the Firefox host manifest |
 

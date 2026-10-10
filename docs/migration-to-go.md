@@ -121,7 +121,7 @@ What is done and what only a person on a real desktop can finish. Everything bel
 | 4 | `screentimed native-host`, S3 (`rpc.Dial`: ownership of the socket and its directory, then `SO_PEERCRED`), installer, `.deb` manifest. Tested end to end through a pipe into a running daemon. | Firefox and Chromium with the extension loaded, on a machine without Bun. |
 | 5 | Bun daemon, `packages/db` and the extension's legacy broadcast mode removed; migrations live in `internal/store/migrations`; unit, `.deb`, CI and docs updated; ADR 6 superseded. The contract fixtures pass against `screentimed` with no Bun daemon in the repo. | `dpkg -i` on a real machine. |
 | 6 | Wails v3 shell ([ADR 9](adr/0009-wails-v3-ui-shell.md)): dashboard, quick panel, tray menu, S3/S4/S5, minimum window size, single instance. | Tray clicks, panel position and transparency on GNOME with the AppIndicator extension. |
-| 7 | See below. | Anything needing macOS, Windows or a KDE session. |
+| 7 | KDE Wayland adapter ([ADR 11](adr/0011-kde-wayland-adapter.md)): KWin script, `kde-wayland` provider, idle over `ext-idle-notify-v1` (checked against headless sway). Planner, Windows and macOS not started. | The Plasma checklist in ADR 11; anything needing macOS or Windows. |
 
 **Measured in the sandbox** (so ceilings or floors, not session numbers): `screentimed` idles at **10 MB** RSS (budget 60 MB; was 43 MB under Bun). The app holds **75 MB** PSS with only the tray, **~500 MB** with the dashboard open under software rendering (a bare Wails window is ~290 MB; the rest is WebKitGTK), and ~150 MB after the window is closed. The `.deb` is **6.7 MB** (19 MB installed), down from 30 MB (86 MB).
 

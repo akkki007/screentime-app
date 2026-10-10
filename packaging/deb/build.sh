@@ -48,6 +48,11 @@ EXT_DIR="$STAGE/usr/share/gnome-shell/extensions/$EXT_UUID"
 install -Dm644 adapters/gnome-extension/extension.js "$EXT_DIR/extension.js"
 install -Dm644 adapters/gnome-extension/metadata.json "$EXT_DIR/metadata.json"
 
+echo "==> KWin script"
+KWIN_DIR="$STAGE/usr/share/kwin/scripts/screentime"
+install -Dm644 adapters/kwin-script/metadata.json "$KWIN_DIR/metadata.json"
+install -Dm644 adapters/kwin-script/contents/code/main.js "$KWIN_DIR/contents/code/main.js"
+
 echo "==> desktop entry and icon"
 install -Dm644 "packaging/$HOST_NAME.desktop" "$STAGE/usr/share/applications/$HOST_NAME.desktop"
 install -Dm644 cmd/screentime/icons/tray.png \
@@ -108,6 +113,8 @@ Screentime is installed. To finish setting up, as your own user:
   systemctl --user start screentime-daemon
   gnome-extensions enable screentime-focus@akkki007.github.io
 On GNOME/Wayland, log out and back in once so the Shell loads the extension.
+On KDE Plasma, instead turn on "Screentime focus" in System Settings >
+Window Management > KWin Scripts.
 
 MSG
 fi
