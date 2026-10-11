@@ -11,11 +11,6 @@
  *     SetCaptureTitles(true) (the user's "Record window titles" setting).
  *   - GetFocus answers anyone else with nothing.
  *
- * Legacy mode: the Bun daemon reaches D-Bus through `gdbus monitor`, which
- * can't subscribe, so until some client subscribes in this Shell session the
- * old behaviour (a broadcast signal, with titles) is kept. It goes away with
- * the Bun daemon (migration step 5).
- *
  * See docs/architecture.md#focus-adapters and docs/adapters.md.
  */
 import GLib from 'gi://GLib';
@@ -47,11 +42,6 @@ const FocusIface = `
     </signal>
   </interface>
 </node>`;
-
-// Module scope outlives disable/enable (GNOME disables extensions on the
-// lock screen), so once a daemon has subscribed, unlocking never falls back
-// to legacy broadcasts.
-let everSubscribed = false;
 
 export default class ScreentimeFocusExtension extends Extension {
   enable() {
@@ -103,7 +93,6 @@ export default class ScreentimeFocusExtension extends Extension {
     if (!this._subscriber) {
       this._subscriber = sender;
       this._captureTitles = false;
-      everSubscribed = true;
       // When the daemon exits (or restarts), let the next one subscribe.
       this._subscriberWatch = Gio.bus_watch_name_on_connection(
         Gio.DBus.session,
@@ -132,7 +121,6 @@ export default class ScreentimeFocusExtension extends Extension {
     const sender = invocation.get_sender();
     let reply = ['', '', 0];
     if (focus && sender === this._subscriber) reply = this._forSubscriber(focus);
-    else if (focus && !everSubscribed) reply = focus; // legacy mode
     invocation.return_value(new GLib.Variant('(ssu)', reply));
   }
 
@@ -165,18 +153,16 @@ export default class ScreentimeFocusExtension extends Extension {
 
   _emitFocusChanged() {
     const focus = this._describeFocus();
-    if (!focus) return;
-    if (this._subscriber) {
-      // Addressed to the subscriber only: nobody else on the bus receives it.
-      Gio.DBus.session.emit_signal(
-        this._subscriber,
-        FOCUS_OBJECT_PATH,
-        FOCUS_INTERFACE_NAME,
-        'FocusChanged',
-        new GLib.Variant('(ssu)', this._forSubscriber(focus)),
-      );
-    } else if (!everSubscribed) {
-      this._dbusImpl.emit_signal('FocusChanged', new GLib.Variant('(ssu)', focus));
-    }
+    // Without a subscriber nothing is sent: a broadcast would show every
+    // window title to the whole session bus.
+    if (!focus || !this._subscriber) return;
+    // Addressed to the subscriber only: nobody else on the bus receives it.
+    Gio.DBus.session.emit_signal(
+      this._subscriber,
+      FOCUS_OBJECT_PATH,
+      FOCUS_INTERFACE_NAME,
+      'FocusChanged',
+      new GLib.Variant('(ssu)', this._forSubscriber(focus)),
+    );
   }
 }

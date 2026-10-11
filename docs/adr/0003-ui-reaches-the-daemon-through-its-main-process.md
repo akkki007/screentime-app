@@ -4,7 +4,7 @@ Date: 2026-10-01
 
 ## Status
 
-Accepted
+Accepted. Still holds with a Go main process ([ADR 9](0009-wails-v3-ui-shell.md)); the details below describe the Electrobun implementation, which `internal/shell` and `cmd/screentime` replaced. The allow-list is now an explicit list in `internal/shell/bridge.go`, and exports follow S5 (`0600`, exclusive create, base name only).
 
 ## Context
 

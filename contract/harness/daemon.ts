@@ -1,14 +1,14 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { Database } from 'bun:sqlite';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDb } from '@screentime/db';
 /**
  * Starts a daemon in an isolated, deterministic environment and talks to it
  * over its socket. Used both to record fixtures and to replay them.
  *
- * The daemon command defaults to the Bun daemon with the fake clock
- * preloaded. Set CONTRACT_DAEMON_CMD (space-separated) to run another
- * implementation against the same fixtures, e.g. the Go daemon.
+ * The daemon command defaults to bin/screentimed (go build -o bin/screentimed
+ * ./cmd/screentimed). Set CONTRACT_DAEMON_CMD (space-separated) to run another
+ * build against the same fixtures.
  */
 import { type Subprocess, spawn } from 'bun';
 
@@ -28,12 +28,23 @@ export type FixtureEnv = {
 export function daemonCommand(): string[] {
   const custom = process.env.CONTRACT_DAEMON_CMD;
   if (custom) return custom.split(' ').filter(Boolean);
-  return [
-    process.execPath,
-    '--preload',
-    join(import.meta.dir, 'fake-clock.ts'),
-    join(ROOT, 'apps', 'daemon', 'src', 'index.ts'),
-  ];
+  return [join(ROOT, 'bin', 'screentimed')];
+}
+
+const MIGRATIONS_DIR = join(ROOT, 'internal', 'store', 'migrations');
+
+/** A database at the current schema, made the way the daemon does: numbered files, PRAGMA user_version. */
+function createDb(path: string): Database {
+  mkdirSync(join(path, '..'), { recursive: true });
+  const db = new Database(path, { create: true });
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  files.forEach((file, i) => {
+    db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
+    db.exec(`PRAGMA user_version = ${i + 1}`);
+  });
+  return db;
 }
 
 export type Message = Record<string, unknown>;
@@ -62,7 +73,7 @@ export async function startDaemon(env: FixtureEnv): Promise<Daemon> {
   for (const d of [dataHome, home, emptyDataDirs]) mkdirSync(d, { recursive: true });
   mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
 
-  const db = openDb(join(dataHome, 'screentime', 'screentime.db'));
+  const db = createDb(join(dataHome, 'screentime', 'screentime.db'));
   db.exec(readFileSync(join(FIXTURES_DIR, env.seed), 'utf8'));
   db.close();
 

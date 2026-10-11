@@ -8,8 +8,6 @@
   "files": {
     "ignoreUnknown": true,
     "ignore": [
-      "**/.cottontail-tmp",
-      "**/.hutch",
       "**/artifacts",
       "**/build",
       "contract/fixtures/*.json",

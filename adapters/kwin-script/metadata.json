@@ -1,0 +1,14 @@
+{
+  "KPlugin": {
+    "Id": "screentime",
+    "Name": "Screentime focus",
+    "Description": "Reports the focused app to the Screentime tracker daemon over D-Bus. No tracking, storage or network access of its own.",
+    "Authors": [{ "Name": "Screentime contributors" }],
+    "License": "MIT",
+    "Version": "1",
+    "Website": "https://github.com/akkki007/screentime-app"
+  },
+  "KPackageStructure": "KWin/Script",
+  "X-Plasma-API": "javascript",
+  "X-Plasma-MainScript": "code/main.js"
+}

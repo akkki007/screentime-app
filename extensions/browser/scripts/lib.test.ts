@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildHostManifest, buildManifest, hostManifestPath, hostWrapperScript } from './lib';
+import { buildHostManifest, buildManifest, hostManifestPath } from './lib';
 
 const base = {
   manifest_version: 3,
@@ -53,12 +53,6 @@ describe('native host manifests', () => {
     expect(() => buildHostManifest('chrome', '/x/host', 'short')).toThrow('Chromium extension ID');
     expect(() => buildHostManifest('chrome', '/x/host', `${'a'.repeat(31)}z`)).toThrow(
       'Chromium extension ID',
-    );
-  });
-
-  test('wrapper script quotes paths safely', () => {
-    expect(hostWrapperScript('/home/me/.bun/bin/bun', "/x/it's here/host.ts")).toBe(
-      "#!/bin/sh\nexec '/home/me/.bun/bin/bun' '/x/it'\\''s here/host.ts'\n",
     );
   });
 });

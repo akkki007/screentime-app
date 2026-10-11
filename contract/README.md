@@ -1,6 +1,6 @@
 # Daemon IPC contract
 
-The frozen contract between the daemon and its clients (the UI, the browser native host): what every RPC method accepts and answers, recorded from the current Bun daemon. This is step 1 of the [migration to Go](../docs/migration-to-go.md). The Go daemon is done when it replays these fixtures.
+The frozen contract between the daemon and its clients (the UI, the browser native host): what every RPC method accepts and answers, recorded from the Bun daemon before it was removed, and replayed against `screentimed` in CI. They began as step 1 of the [migration to Go](../docs/migration-to-go.md) and now pin the daemon's behaviour for any future change.
 
 ```
 schema/rpc.schema.json   JSON Schema for every method, notification and the browser host message
@@ -12,18 +12,19 @@ harness/                 recorder, replayer and the scenario definitions
 ## Commands
 
 ```bash
-bun test contract                    # replay every fixture against the Bun daemon
+go build -o bin/screentimed ./cmd/screentimed
+bun test contract                    # replay every fixture against bin/screentimed
 bun run --cwd contract schema        # regenerate schema/ after changing packages/shared/src/ipc.ts
-bun run --cwd contract record        # re-record all fixtures (or: record <scenario>)
+bun run --cwd contract record        # re-record all fixtures from bin/screentimed (or: record <scenario>)
 ```
 
-Fixtures change only on purpose. After re-recording, read the diff: every changed line is a behaviour change that every implementation must follow. CI fails if the schema is stale, if a scenario has no fixture, or if a replay doesn't match.
+Fixtures change only on purpose, and the Go daemon is now the only thing that can record them: to change behaviour, change `screentimed`, re-record, and read the diff. (The original fixtures carry the Bun daemon's Zod error wording, hence the loose-message default below; a re-recorded scenario carries the Go wording.) After re-recording, read the diff: every changed line is a behaviour change that every implementation must follow. CI fails if the schema is stale, if a scenario has no fixture, or if a replay doesn't match.
 
 ## How a fixture runs
 
 Each scenario starts a fresh daemon in a throwaway directory:
 
-1. A new database is created with the migrations from `packages/db/migrations`, then `fixtures/seed.sql` is applied.
+1. A new database is created with the migrations from `internal/store/migrations`, then `fixtures/seed.sql` is applied.
 2. The daemon starts with this environment:
 
    | Variable | Value | Why |
@@ -42,22 +43,22 @@ A scenario must finish within 4 s, because the rules engine first ticks after 5 
 
 - **Responses** must match exactly: id, `result`, `error.code` and `error.message`.
 - **Notifications** around a request must match as a multiset. Their order relative to the response is not part of the contract.
-- **Loose messages** (`CONTRACT_LOOSE_MESSAGES=1`): the Bun daemon's validation messages come from Zod, and another implementation shouldn't have to copy Zod's wording. In this mode, a `field: reason` message only needs the same field, and any other message only needs the same error code. The UI shows these messages, so keep the `field: reason` shape.
+- **Loose messages** (the default; `CONTRACT_STRICT_MESSAGES=1` turns it off): the recorded validation messages come from Zod, and the daemon shouldn't have to copy Zod's wording. In this mode, a `field: reason` message only needs the same field, and any other message only needs the same error code. The UI shows these messages, so keep the `field: reason` shape.
 
-## Running another implementation
+## Running a particular build
 
-The harness spawns `CONTRACT_DAEMON_CMD` (space-separated) instead of the Bun daemon:
+The harness spawns `bin/screentimed` unless `CONTRACT_DAEMON_CMD` (space-separated) names another build:
 
 ```bash
 go build -o bin/screentimed ./cmd/screentimed
-CONTRACT_DAEMON_CMD="$PWD/bin/screentimed" CONTRACT_LOOSE_MESSAGES=1 bun test contract
+CONTRACT_DAEMON_CMD="$PWD/bin/screentimed" bun test contract
 ```
 
 CI runs exactly this for the Go daemon (`contract-go` job).
 
-The implementation must:
+The daemon must:
 
-- honour the environment variables in the table above. `SCREENTIME_FAKE_NOW` is a test hook: it replaces every read of the current time. (The Bun daemon gets it from `harness/fake-clock.ts`, preloaded.)
+- honour the environment variables in the table above. `SCREENTIME_FAKE_NOW` is a test hook: it replaces every read of the current time.
 - create its socket at `$XDG_RUNTIME_DIR/screentime/daemon.sock` and its database at `$XDG_DATA_HOME/screentime/screentime.db`, using the database the harness prepared (`PRAGMA user_version` is already current).
 - exit on `SIGTERM`.
 

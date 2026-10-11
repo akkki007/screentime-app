@@ -7,9 +7,13 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/lib/screentime/daemon
+ExecStart=/usr/lib/screentime/screentimed
 Restart=on-failure
 RestartSec=2
+
+# Everything the daemon writes is private to the user (S1); it also sets this
+# itself.
+UMask=0077
 
 # $XDG_RUNTIME_DIR/screentime, where the UI and browser host find the socket.
 RuntimeDirectory=screentime
@@ -21,10 +25,11 @@ RuntimeDirectoryMode=0700
 RestrictAddressFamilies=AF_UNIX
 NoNewPrivileges=true
 LockPersonality=true
+# Go does not need writable+executable pages, unlike a JIT.
+MemoryDenyWriteExecute=true
 # Deliberately NOT using ProtectSystem=/PrivateTmp=/ReadWritePaths=: they need
 # unprivileged user namespaces, which Ubuntu 24.04+ restricts, and a user unit
 # using them fails to start with "Failed to set up mount namespacing".
-# MemoryDenyWriteExecute is also off because Bun's JIT needs writable+executable pages.
 
 [Install]
 WantedBy=graphical-session.target

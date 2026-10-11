@@ -331,7 +331,11 @@ func (d *Daemon) handle(method string, params json.RawMessage) (any, error) {
 			return nil, nil
 		}
 		if d.cfg.Debug {
-			log.Printf("[daemon] browser.activeTab -> %+v", tab)
+			domain := "<none>"
+			if tab.Domain != nil {
+				domain = *tab.Domain
+			}
+			log.Printf("[daemon] browser.activeTab -> domain=%s active=%t", domain, tab.Active)
 		}
 		d.web.Handle(tab.Domain, tab.Active, d.browserInUse())
 		return nil, nil

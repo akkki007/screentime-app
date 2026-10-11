@@ -10,44 +10,10 @@
         "typescript": "^5.6.3",
       },
     },
-    "apps/daemon": {
-      "name": "@screentime/daemon",
-      "version": "0.1.0",
-      "dependencies": {
-        "@screentime/db": "workspace:*",
-        "@screentime/shared": "workspace:*",
-        "zod": "^3.23.8",
-      },
-      "devDependencies": {
-        "typescript": "^5.6.3",
-      },
-    },
-    "apps/desktop": {
-      "name": "@screentime/desktop",
-      "version": "0.1.0",
-      "dependencies": {
-        "@screentime/shared": "workspace:*",
-        "uplot": "^1.6.31",
-      },
-      "devDependencies": {
-        "@fontsource-variable/outfit": "^5.3.0",
-        "@sveltejs/vite-plugin-svelte": "^5.0.1",
-        "@tailwindcss/vite": "^4.0.0",
-        "@types/bun": "^1.1.13",
-        "electrobun": "2.0.2",
-        "svelte": "^5.14.1",
-        "svelte-check": "^4.1.0",
-        "tailwindcss": "^4.0.0",
-        "typescript": "^5.6.3",
-        "vite": "^6.0.3",
-        "zod": "^3.23.8",
-      },
-    },
     "contract": {
       "name": "@screentime/contract",
       "version": "0.1.0",
       "dependencies": {
-        "@screentime/db": "workspace:*",
         "@screentime/shared": "workspace:*",
         "zod": "^3.23.8",
       },
@@ -67,14 +33,25 @@
         "typescript": "^5.6.3",
       },
     },
-    "packages/db": {
-      "name": "@screentime/db",
+    "frontend": {
+      "name": "@screentime/frontend",
       "version": "0.1.0",
       "dependencies": {
         "@screentime/shared": "workspace:*",
+        "@wailsio/runtime": "3.0.0-beta.28",
+        "uplot": "^1.6.31",
       },
       "devDependencies": {
+        "@fontsource-variable/outfit": "^5.3.0",
+        "@sveltejs/vite-plugin-svelte": "^5.0.1",
+        "@tailwindcss/vite": "^4.0.0",
+        "@types/bun": "^1.1.13",
+        "svelte": "^5.14.1",
+        "svelte-check": "^4.1.0",
+        "tailwindcss": "^4.0.0",
         "typescript": "^5.6.3",
+        "vite": "^6.0.3",
+        "zod": "^3.23.8",
       },
     },
     "packages/shared": {
@@ -227,11 +204,7 @@
 
     "@screentime/contract": ["@screentime/contract@workspace:contract"],
 
-    "@screentime/daemon": ["@screentime/daemon@workspace:apps/daemon"],
-
-    "@screentime/db": ["@screentime/db@workspace:packages/db"],
-
-    "@screentime/desktop": ["@screentime/desktop@workspace:apps/desktop"],
+    "@screentime/frontend": ["@screentime/frontend@workspace:frontend"],
 
     "@screentime/shared": ["@screentime/shared@workspace:packages/shared"],
 
@@ -287,6 +260,8 @@
 
     "@types/node": ["@types/node@26.6.2", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g=="],
 
+    "@wailsio/runtime": ["@wailsio/runtime@3.0.0-beta.28", "", {}, "sha512-IPl7WIsu0uQni9qgYAGm47G1WKNV/YFQannb/1r8orA81+wswJmCt/TS6GNb/U/coIRYyQ3ruO1FNMVwUVDvQQ=="],
+
     "acorn": ["acorn@8.18.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
 
     "aria-query": ["aria-query@5.3.1", "", {}, "sha512-Z/ZeOgVl7bcSYZ/u/rh0fOpvEpq//LZmdbkXyc7syVzjPAhfOa9ebsdTSjEBDU4vs5nC98Kfduj1uFo0qyET3g=="],
@@ -306,8 +281,6 @@
     "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
 
     "devalue": ["devalue@5.9.4", "", {}, "sha512-sPAT4pztbu6586/hrhOnMKS17IJrvg12mXiSPSS3W5qDeN2RGgvZ0diZCm31dBbnevfVmujNO3IM2wrS4Y2Rhg=="],
-
-    "electrobun": ["electrobun@2.0.2", "", { "bin": { "electrobun": "bin/electrobun.cjs" } }, "sha512-UDs2iTNs6qYCzdWiFch/0DtxrsijNDr1WFDQfRmSA3Iouv0iEzyCF5mh4uDxkwNnAbuwFyow36EiVTYP4DRzig=="],
 
     "enhanced-resolve": ["enhanced-resolve@5.26.0", "", { "dependencies": { "graceful-fs": "^4.2.4", "tapable": "^2.3.3" } }, "sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw=="],
 

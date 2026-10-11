@@ -1,9 +1,9 @@
 # X11 focus adapter
 
-**Status: v1.x — not started.** See `docs/architecture.md#roadmap` (Phase 4) and `docs/adapters.md`.
+**Status: v1.x, implemented in the daemon** (`internal/focus/x11.go`). Nothing to install: there is no script or extension for X11.
 
-Planned implementation:
+- **Focus source:** `_NET_ACTIVE_WINDOW` on the root window, over the X protocol (`github.com/jezek/xgb`). `WM_CLASS` is resolved to the desktop-entry ID, so an app has the same ID as under Wayland.
+- **Idle source:** the MIT-SCREEN-SAVER extension's idle time.
+- Used for X11 sessions, including GNOME on Xorg. It is integration-tested in CI against a private Xvfb server; it still needs a check on a real X11 session (see `docs/migration-to-go.md`).
 
-- **Focus source:** `_NET_ACTIVE_WINDOW` on the root window, via `xcb` or `bun:ffi` against `libX11`/`libxcb`.
-- **Idle source:** the XScreenSaver (`XSS`) extension's idle time query.
-- Implements the shared `FocusProvider` interface from `packages/shared/src/focus.ts`, registered in `apps/daemon/src/focus-providers`.
+See `docs/adapters.md`.

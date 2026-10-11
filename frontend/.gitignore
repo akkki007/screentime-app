@@ -1,0 +1,5 @@
+node_modules/
+# Built by `bun run build`; cmd/screentime embeds it. Only the placeholder is tracked.
+dist/*
+!dist/.gitkeep
+*.tsbuildinfo

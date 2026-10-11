@@ -2,7 +2,8 @@
 node_modules/
 
 # Build output
-dist/
+/dist/
+extensions/browser/dist/
 build/
 *.tsbuildinfo
 
@@ -35,8 +36,8 @@ packaging/appimage/*.AppImage
 # Test / coverage
 coverage/
 .cottontail-tmp/
-.hutch/
 artifacts/
 
 # Go
 /bin/
+

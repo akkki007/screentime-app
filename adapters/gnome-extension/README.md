@@ -1,6 +1,6 @@
 # GNOME Shell focus adapter
 
-A small GJS (ESM, GNOME 45+) Shell extension that reports the focused window over D-Bus. This is the v1 adapter — the only reliable focus source on GNOME Wayland — consumed by `apps/daemon/src/focus-providers/gnome-wayland.ts`.
+A small GJS (ESM, GNOME 45+) Shell extension that reports the focused window over D-Bus. This is the v1 adapter — the only reliable focus source on GNOME Wayland — consumed by the daemon's `gnome-wayland` provider (`internal/focus/gnome.go`).
 
 It intentionally does nothing else: no tracking, no storage, no network access. Keeping it tiny is a deliberate mitigation against GNOME Shell API changes breaking it on upgrade (see `docs/architecture.md#risks-and-open-questions`).
 
@@ -34,15 +34,15 @@ Owns the name `io.github.akkki007.screentime` and exports `/io/github/akkki007/s
 
 On Wayland, apps can't normally see each other's window titles, and titles often hold document names, chat contacts and page titles. So nothing goes on the bus for other processes to read, and titles don't leave the Shell unless the user opted in (issue #3; `docs/migration-to-go.md`, S6).
 
-**Legacy mode:** the Bun daemon talks to D-Bus through `gdbus monitor`, which can't subscribe. Until some client subscribes in a Shell session, the extension keeps the old behaviour: a broadcast `FocusChanged` with titles, and `GetFocus` answering anyone. Once a client has subscribed, it never falls back, even after the lock screen. Legacy mode is removed with the Bun daemon (migration step 5).
+Until a daemon subscribes, the extension sends nothing and `GetFocus` answers `('', '', 0)`; it never falls back to a broadcast.
 
 ## Manual test (privacy, issue #3)
 
 The Go daemon's side is tested in CI against a fake extension. Run the extension itself through this in a real session before closing #3:
 
 1. Install it with `./install.sh`, log out and back in, then `gnome-extensions enable screentime-focus@akkki007.github.io`.
-2. **Legacy mode (no Go daemon running):** `gdbus monitor --session --dest io.github.akkki007.screentime` shows `FocusChanged` with titles when you switch windows. This is unchanged, for the Bun daemon.
-3. Stop the Bun daemon (`systemctl --user stop screentime-daemon`). Then from the repo root run:
+2. With no daemon running, `gdbus monitor --session --dest io.github.akkki007.screentime` shows **nothing** when you switch windows (there is no broadcast mode any more).
+3. Stop the service if it is running (`systemctl --user stop screentime-daemon`). Then from the repo root run:
    ```bash
    go build -o bin/screentimed ./cmd/screentimed && SCREENTIME_DEBUG=1 bin/screentimed
    ```

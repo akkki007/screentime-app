@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Runs the daemon from this checkout as a systemd *user* service, so tracking
-# survives closing the terminal and starts at login.
+# Builds screentimed from this checkout and runs it as a systemd *user*
+# service, so tracking survives closing the terminal and starts at login.
 #
-#   packaging/systemd/install-dev.sh              install + start
+#   packaging/systemd/install-dev.sh              build, install + start
 #   packaging/systemd/install-dev.sh --dry-run    show what would be written
 #   packaging/systemd/install-dev.sh --uninstall  stop and remove it
+#
+# Needs Go (see go.mod). Re-run it after pulling to rebuild and restart.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -28,11 +30,7 @@ if [ "$MODE" = "uninstall" ]; then
   exit 0
 fi
 
-BUN="$(command -v bun || true)"
-if [ -z "$BUN" ]; then
-  echo "bun not found on PATH. Install it from https://bun.sh first." >&2
-  exit 1
-fi
+BIN="$REPO/bin/screentimed"
 
 # systemd does not use your shell's PATH, so everything is absolute.
 CONTENT="[Unit]
@@ -42,14 +40,15 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=$REPO
-ExecStart=$BUN run $REPO/apps/daemon/src/index.ts
+ExecStart=$BIN
 Restart=on-failure
 RestartSec=2
+UMask=0077
 RuntimeDirectory=screentime
 RuntimeDirectoryMode=0700
 RestrictAddressFamilies=AF_UNIX
 NoNewPrivileges=true
+MemoryDenyWriteExecute=true
 
 [Install]
 WantedBy=graphical-session.target
@@ -61,10 +60,18 @@ if [ "$MODE" = "dry-run" ]; then
   exit 0
 fi
 
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH. Install it from https://go.dev/dl/ first." >&2
+  exit 1
+fi
+(cd "$REPO" && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$BIN" ./cmd/screentimed)
+echo "built $BIN"
+
 mkdir -p "$UNIT_DIR"
 printf '%s' "$CONTENT" > "$UNIT"
 systemctl --user daemon-reload
-systemctl --user enable --now screentime-daemon.service
+systemctl --user enable screentime-daemon.service
+systemctl --user restart screentime-daemon.service
 echo "installed $UNIT"
 echo "logs:   journalctl --user -u screentime-daemon -f"
 echo "remove: $0 --uninstall"
