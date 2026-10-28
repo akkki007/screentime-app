@@ -1,6 +1,7 @@
 <script lang="ts">
 import AppAvatar from '../components/AppAvatar.svelte';
 import Card from '../components/Card.svelte';
+import PlannerSlot from '../components/PlannerSlot.svelte';
 import { daemon } from '../lib/api';
 import { addDays, appLabel, formatDuration, startOfDay } from '../lib/format';
 import { store } from '../lib/store.svelte';
@@ -64,6 +65,8 @@ async function setCategory(appId: string, value: string) {
 			class="w-56 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] placeholder:text-muted"
 		/>
 	</header>
+
+	<PlannerSlot load={() => import("../components/CategorizeAction.svelte")} />
 
 	<Card>
 		{#if rows.length === 0}
