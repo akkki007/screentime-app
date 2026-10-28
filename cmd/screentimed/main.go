@@ -1,6 +1,7 @@
 // Command screentimed is the tracker daemon: it records which app is in
 // focus, enforces the wellbeing rules and serves the UI over JSON-RPC on
-// $XDG_RUNTIME_DIR/screentime/daemon.sock.
+// $XDG_RUNTIME_DIR/screentime/daemon.sock (Linux; see rpc.SocketPath for
+// Windows and macOS). The focus providers per OS are in providers_*.go.
 //
 // Environment:
 //
@@ -26,7 +27,6 @@ import (
 	"github.com/akkki007/screentime-app/internal/apps"
 	"github.com/akkki007/screentime-app/internal/daemon"
 	"github.com/akkki007/screentime-app/internal/focus"
-	"github.com/akkki007/screentime-app/internal/notify"
 	"github.com/akkki007/screentime-app/internal/rpc"
 	"github.com/akkki007/screentime-app/internal/store"
 )
@@ -40,7 +40,7 @@ func main() {
 		}
 		return
 	}
-	if err := run(); err != nil {
+	if err := runOnMainThread(run); err != nil {
 		log.Printf("[daemon] fatal error: %v", err)
 		os.Exit(1)
 	}
@@ -61,7 +61,7 @@ func clock() (func() int64, error) {
 
 func run() error {
 	// Everything the daemon creates is private to the user (S1).
-	syscall.Umask(0o077)
+	restrictUmask()
 
 	now, err := clock()
 	if err != nil {
@@ -78,12 +78,8 @@ func run() error {
 	}
 	defer db.Close()
 
-	dirs := apps.ApplicationDirs()
-	candidates := []focus.Provider{
-		&focus.Gnome{Now: now},
-		&focus.KDE{Now: now},
-		&focus.X11{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
-	}
+	dirs := appDirs()
+	candidates := focusCandidates(now, dirs)
 	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), candidates)
 	if err != nil {
 		return err
@@ -93,7 +89,7 @@ func run() error {
 	d, err := daemon.New(daemon.Config{
 		DB:       db,
 		Provider: provider,
-		Notifier: &notify.DBus{},
+		Notifier: newNotifier(),
 		Now:      now,
 		Lookup:   apps.DirLookup(dirs),
 		Debug:    os.Getenv("SCREENTIME_DEBUG") == "1",

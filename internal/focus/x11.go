@@ -1,3 +1,5 @@
+//go:build linux
+
 package focus
 
 import (
@@ -223,7 +225,7 @@ func (x *X11) OnIdleChange(cb func(bool), thresholdMs int64) func() {
 		every = 5 * time.Second
 	}
 	done := make(chan struct{})
-	go pollIdle(done, every, thresholdMs, func() (int64, error) { return idleMs(conn) }, cb)
+	go pollIdle("x11", done, every, thresholdMs, func() (int64, error) { return idleMs(conn) }, cb)
 	return func() {
 		close(done)
 		conn.Close()
@@ -238,31 +240,4 @@ func idleMs(conn *xgb.Conn) (int64, error) {
 		return 0, err
 	}
 	return int64(info.MsSinceUserInput), nil
-}
-
-// pollIdle calls query every interval until done is closed, and reports each
-// crossing of thresholdMs (not every poll). The first failure is logged.
-func pollIdle(done <-chan struct{}, every time.Duration, thresholdMs int64, query func() (int64, error), cb func(bool)) {
-	ticker := time.NewTicker(every)
-	defer ticker.Stop()
-	idle, warned := false, false
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			ms, err := query()
-			if err != nil {
-				if !warned {
-					log.Printf("[x11] reading idle time: %v", err)
-					warned = true
-				}
-				continue
-			}
-			if now := ms >= thresholdMs; now != idle {
-				idle = now
-				cb(idle)
-			}
-		}
-	}
 }
