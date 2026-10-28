@@ -39,3 +39,37 @@ func TestDefaultFor(t *testing.T) {
 		}
 	}
 }
+
+func TestFromDesktop(t *testing.T) {
+	cases := []struct {
+		cats []string
+		want string
+	}{
+		{[]string{"Utility", "TextEditor", "Development", "IDE"}, "Development"},
+		{[]string{"AudioVideo", "Video", "Player"}, "Entertainment"},
+		{[]string{"Office", "WordProcessor"}, "Productivity"},
+		{[]string{"Office", "Spreadsheet"}, "Productivity"},
+		{[]string{"GNOME", "GTK", "Office", "Viewer", "Graphics"}, "Productivity"},
+		{[]string{"Network", "FileTransfer", "P2P"}, "Utilities"},
+		{[]string{"Network"}, "Utilities"},
+		{[]string{"System", "Settings"}, "Utilities"},
+		{[]string{"System", "Utility", "PackageManager"}, "Utilities"},
+		{[]string{"Graphics", "Photography"}, "Productivity"},
+		{[]string{"GTK", "GNOME", "Utility"}, "Utilities"},
+		{[]string{"Utility", "Development"}, "Development"},
+		{[]string{"Network", "WebBrowser"}, "Browsing"},
+		{[]string{"Network", "Chat", "InstantMessaging"}, "Communication"},
+		{[]string{"Network", "Email"}, "Productivity"},
+		{[]string{"Game", "Utility"}, "Entertainment"},
+		{[]string{"Utility", "TerminalEmulator", "System"}, "Development"},
+		{nil, ""},
+		{[]string{}, ""},
+		{[]string{"GNOME", "GTK", "KDE", "Qt", "X-GNOME-Utilities"}, ""},
+		{[]string{"Bogus", "Whatever"}, ""},
+	}
+	for _, c := range cases {
+		if got := FromDesktop(c.cats); got != c.want {
+			t.Errorf("FromDesktop(%v) = %q, want %q", c.cats, got, c.want)
+		}
+	}
+}

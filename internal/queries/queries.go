@@ -215,7 +215,7 @@ func SetAppCategory(db *sql.DB, appID string, categoryID *int64) (bool, error) {
 			return false, err
 		}
 	}
-	res, err := db.Exec("UPDATE apps SET category_id = ? WHERE app_id = ?", categoryID, appID)
+	res, err := db.Exec("UPDATE apps SET category_id = ?, category_source = 'user' WHERE app_id = ?", categoryID, appID)
 	if err != nil {
 		return false, err
 	}

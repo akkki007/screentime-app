@@ -105,7 +105,7 @@ CREATE INDEX idx_sessions_start ON sessions(start_ts);
 CREATE INDEX idx_web_sessions_start ON web_sessions(start_ts);
 ```
 
-Categories are seeded (Development, Productivity, Communication, Social, Entertainment, Browsing, Utilities, Other) and apps are categorised by ID on first sight (`packages/shared/src/categories.ts`); a category chosen by the user is never overwritten. `categories.productive` is 1 productive, 0 distracting, NULL neutral.
+Categories are seeded (Development, Productivity, Communication, Social, Entertainment, Browsing, Utilities, Other) and apps are categorised on first sight by ID substring rules (`packages/shared/src/categories.ts`), then by the `Categories=` key of their `.desktop` file (`internal/categories`), and `apps.category_source` (`auto` or `user`) records who chose, so a category chosen by the user is never overwritten while uncategorised or Other apps are re-evaluated at daemon start. `categories.productive` is 1 productive, 0 distracting, NULL neutral.
 
 - **Heartbeat:** every 5 s while focused. The open session's `end_ts` is updated in place, so a crash loses 5 s at most. When the user switches apps the old session ends at the switch, not at the last heartbeat.
 - **Suspend:** a heartbeat gap well over 10 s means the machine slept; the session is split there instead of being stretched across the gap.
