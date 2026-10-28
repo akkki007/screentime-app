@@ -4,7 +4,8 @@
 //
 // Environment:
 //
-//	SCREENTIME_FOCUS_PROVIDER  force a focus adapter by id ("none" reports nothing)
+//	SCREENTIME_FOCUS_PROVIDER  force a focus adapter by id: gnome-wayland, kde-wayland,
+//	                           wlroots, x11 ("none" reports nothing)
 //	SCREENTIME_DEBUG=1         log focus changes and browser reports
 //	SCREENTIME_FAKE_NOW        test hook: freeze the clock at this Unix ms
 //	                           (used by the contract fixtures in contract/)
@@ -82,6 +83,7 @@ func run() error {
 	candidates := []focus.Provider{
 		&focus.Gnome{Now: now},
 		&focus.KDE{Now: now},
+		&focus.Wlroots{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
 		&focus.X11{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
 	}
 	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), candidates)
