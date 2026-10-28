@@ -24,6 +24,9 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,7 +63,10 @@ type Config struct {
 	Lookup  apps.Lookup
 	KeyPath string // remote API key file; see key.go
 	RunDir  string // private runtime directory for the sidecar's key and pid file
-	Options Options
+	// FetchPath is the screentime-fetch helper for https endpoints; "" looks
+	// next to the running binary, then on PATH.
+	FetchPath string
+	Options   Options
 }
 
 // timeouts are variables so tests can shorten them.
@@ -98,7 +104,6 @@ type Planner struct {
 	opts    Options
 	sup     *Supervisor // created by the first local request
 	lastErr string
-	tlsRoot rootPool // tests only
 }
 
 // New returns a planner. It does no I/O.
@@ -303,3 +308,20 @@ func (p *Planner) Categorize(appIDs []string) ([]ipc.PlannerCategorization, erro
 }
 
 func logf(format string, args ...any) { log.Printf("[planner] "+format, args...) }
+
+// fetchPath finds the screentime-fetch helper, or "" when there is none.
+func (p *Planner) fetchPath() string {
+	if p.cfg.FetchPath != "" {
+		return p.cfg.FetchPath
+	}
+	if exe, err := os.Executable(); err == nil {
+		helper := filepath.Join(filepath.Dir(exe), "screentime-fetch")
+		if st, err := os.Stat(helper); err == nil && st.Mode().IsRegular() {
+			return helper
+		}
+	}
+	if path, err := exec.LookPath("screentime-fetch"); err == nil {
+		return path
+	}
+	return ""
+}

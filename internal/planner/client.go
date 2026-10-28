@@ -8,11 +8,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
-)
 
-// maxResponseBytes caps what is read from a model server: a few hundred
-// tokens of JSON come to a few KB, so this only stops a misbehaving endpoint.
-const maxResponseBytes = 1 << 20
+	"github.com/akkki007/screentime-app/internal/httpx"
+)
 
 // ParseEndpoint checks a remote base URL. Plain http is accepted only for a
 // loopback host (Ollama and friends on this machine); everything else must be
@@ -136,19 +134,16 @@ func (p *Planner) postOnce(ctx context.Context, base *url.URL, key string, body 
 	if key != "" {
 		headers = append(headers, [2]string{"Authorization", "Bearer " + key})
 	}
-	p.mu.Lock()
-	roots := p.tlsRoot
-	p.mu.Unlock()
 	u, err := url.Parse(target)
 	if err != nil {
 		return "", err
 	}
-	resp, err := roundTrip(ctx, "POST", u, headers, payload, p.tm, roots)
+	resp, err := p.roundTrip(ctx, "POST", u, headers, payload, p.tm.dial)
 	if err != nil {
 		return "", err
 	}
-	if resp.status < 200 || resp.status > 299 {
-		return "", &statusError{resp.status}
+	if resp.Status < 200 || resp.Status > 299 {
+		return "", &statusError{resp.Status}
 	}
 	var out struct {
 		Choices []struct {
@@ -157,7 +152,7 @@ func (p *Planner) postOnce(ctx context.Context, base *url.URL, key string, body 
 			} `json:"message"`
 		} `json:"choices"`
 	}
-	if err := json.Unmarshal(resp.body, &out); err != nil {
+	if err := json.Unmarshal(resp.Body, &out); err != nil {
 		return "", errors.New("the endpoint's answer was not a chat completion")
 	}
 	if len(out.Choices) == 0 || strings.TrimSpace(out.Choices[0].Message.Content) == "" {
@@ -194,7 +189,7 @@ func (p *Planner) completeLocal(ctx context.Context, o Options, req chatRequest)
 		}
 		content, err := p.chat(ctx, lease.BaseURL, lease.Key, "local", req)
 		lease.Release()
-		var ce *connError
+		var ce *httpx.ConnError
 		if errors.As(err, &ce) && ctx.Err() == nil {
 			lastErr = err
 			sup.Invalidate(lease)

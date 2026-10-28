@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -15,13 +16,32 @@ import (
 	"time"
 
 	"github.com/akkki007/screentime-app/internal/apps"
+	"github.com/akkki007/screentime-app/internal/httpx/tlsx"
 	"github.com/akkki007/screentime-app/internal/store"
 )
 
 // TestMain doubles as a tiny fake llama-server: when FAKE_LLAMA_SERVER=1 the
 // test binary, started with llama-server's flags, serves /health and
 // /v1/chat/completions instead of running tests. No real model is involved.
+//
+// With FAKE_FETCH=1 it is the screentime-fetch helper instead, trusting the
+// PEM roots in FAKE_FETCH_CA (or the system's when unset).
 func TestMain(m *testing.M) {
+	if os.Getenv("FAKE_FETCH") == "1" {
+		var roots *x509.CertPool
+		if ca := os.Getenv("FAKE_FETCH_CA"); ca != "" {
+			pem, err := os.ReadFile(ca)
+			if err != nil {
+				os.Exit(2)
+			}
+			roots = x509.NewCertPool()
+			roots.AppendCertsFromPEM(pem)
+		}
+		if err := tlsx.Serve(os.Stdin, os.Stdout, roots); err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	if os.Getenv("FAKE_LLAMA_SERVER") == "1" {
 		fakeLlama(os.Args[1:])
 		os.Exit(0)
@@ -273,7 +293,9 @@ func remotePlanner(t *testing.T, db *sql.DB, url string) *Planner {
 		Lookup:  noLookup,
 		KeyPath: filepath.Join(t.TempDir(), "sub", "planner.key"),
 		RunDir:  t.TempDir(),
-		Options: Options{Provider: "remote", Endpoint: url, Model: "test-model"},
+		// This test binary, as the helper, when FAKE_FETCH=1 is set.
+		FetchPath: os.Args[0],
+		Options:   Options{Provider: "remote", Endpoint: url, Model: "test-model"},
 	})
 	t.Cleanup(p.Close)
 	return p

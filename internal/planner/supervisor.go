@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/akkki007/screentime-app/internal/httpx"
 )
 
 // State is the sidecar's lifecycle state, as planner.status reports it.
@@ -297,12 +299,12 @@ func (s *Supervisor) alive(c *child) bool {
 func (s *Supervisor) healthy(ctx context.Context, c *child) error {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	resp, err := roundTrip(ctx, "GET", c.root.JoinPath("health"), nil, nil, timeouts{dial: s.cfg.Dial}, nil)
+	resp, err := httpx.RoundTrip(ctx, "GET", c.root.JoinPath("health"), nil, nil, s.cfg.Dial, nil)
 	if err != nil {
 		return err
 	}
-	if resp.status != 200 {
-		return fmt.Errorf("health check answered HTTP %d", resp.status)
+	if resp.Status != 200 {
+		return fmt.Errorf("health check answered HTTP %d", resp.Status)
 	}
 	return nil
 }

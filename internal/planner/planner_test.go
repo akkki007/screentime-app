@@ -2,13 +2,14 @@ package planner
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/akkki007/screentime-app/internal/apps"
+	"github.com/akkki007/screentime-app/internal/httpx"
 	"github.com/akkki007/screentime-app/internal/ipc"
 )
 
@@ -435,14 +437,16 @@ func TestTLSCertificatesAreVerified(t *testing.T) {
 	if err := WriteKey(p.cfg.KeyPath, "sk-tls"); err != nil {
 		t.Fatal(err)
 	}
+	// https goes through the helper (this test binary), never the daemon.
+	t.Setenv("FAKE_FETCH", "1")
 	if _, err := p.Suggest(""); err == nil {
 		t.Fatal("an untrusted certificate was accepted")
 	}
-	pool := x509.NewCertPool()
-	pool.AddCert(ts.Certificate())
-	p.mu.Lock()
-	p.tlsRoot = pool
-	p.mu.Unlock()
+	ca := filepath.Join(t.TempDir(), "ca.pem")
+	if err := os.WriteFile(ca, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ts.Certificate().Raw}), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_FETCH_CA", ca)
 	if _, err := p.Suggest(""); err != nil {
 		t.Fatal(err)
 	}
@@ -454,13 +458,13 @@ func TestTLSCertificatesAreVerified(t *testing.T) {
 func TestPlainHTTPToANonLoopbackAddressIsRefused(t *testing.T) {
 	// The dial itself refuses non-loopback peers for http, even if a hostname
 	// that resolves elsewhere got past the URL check.
-	if err := loopbackOnly("tcp", "93.184.216.34:80", nil); err == nil {
+	if err := httpx.LoopbackOnly("tcp", "93.184.216.34:80", nil); err == nil {
 		t.Error("a public address was accepted for plain http")
 	}
-	if err := loopbackOnly("tcp", "127.0.0.1:80", nil); err != nil {
+	if err := httpx.LoopbackOnly("tcp", "127.0.0.1:80", nil); err != nil {
 		t.Error(err)
 	}
-	if err := loopbackOnly("tcp", "[::1]:80", nil); err != nil {
+	if err := httpx.LoopbackOnly("tcp", "[::1]:80", nil); err != nil {
 		t.Error(err)
 	}
 	db := openDB(t)
@@ -556,5 +560,30 @@ func TestRemoteStatus(t *testing.T) {
 	}
 	if local := OffStatus(Options{}, ""); local.Provider != "local" || local.Host != "" || local.ServerFound || local.ModelFound {
 		t.Errorf("local off status = %+v", local)
+	}
+}
+
+func TestRemoteWithoutTheHelperSaysSo(t *testing.T) {
+	db := openDB(t)
+	p := remotePlanner(t, db, "https://api.example.com/v1")
+	p.cfg.FetchPath = filepath.Join(t.TempDir(), "missing")
+	if err := WriteKey(p.cfg.KeyPath, "sk-x"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Suggest(""); err == nil {
+		t.Fatal("a missing helper should fail the request")
+	}
+}
+
+// The daemon must never link TLS: that is the point of screentime-fetch.
+func TestDaemonDoesNotLinkTLS(t *testing.T) {
+	out, err := exec.Command("go", "list", "-deps", "../../cmd/screentimed").Output()
+	if err != nil {
+		t.Skipf("go list: %v", err)
+	}
+	for _, pkg := range strings.Fields(string(out)) {
+		if pkg == "crypto/tls" || pkg == "net/http" || pkg == "crypto/x509" {
+			t.Errorf("screentimed depends on %s", pkg)
+		}
 	}
 }

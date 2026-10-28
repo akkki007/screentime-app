@@ -95,7 +95,7 @@ jobs:
 
       # macOS builds with cgo (the Objective-C focus provider); Windows has none.
       - name: Build screentimed
-        run: go build ./cmd/screentimed
+        run: go build ./cmd/screentimed ./cmd/screentime-fetch
 
       - name: Test
         run: go test ./internal/focus/ ./internal/rpc/ ./internal/store/ ./cmd/screentimed/

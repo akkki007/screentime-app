@@ -24,6 +24,10 @@ echo "==> daemon (screentimed)"
 install -d "$STAGE/usr/lib/screentime"
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$STAGE/usr/lib/screentime/screentimed" ./cmd/screentimed
 
+echo "==> planner https helper (screentime-fetch)"
+# Run only for a remote planner request, so screentimed itself never links TLS.
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$STAGE/usr/lib/screentime/screentime-fetch" ./cmd/screentime-fetch
+
 echo "==> browser native-messaging host (screentimed native-host)"
 # Browsers launch the manifest's path with their own arguments, so it is a
 # symlink to screentimed, which recognises the link's name.

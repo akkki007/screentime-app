@@ -65,6 +65,8 @@ if ! command -v go >/dev/null 2>&1; then
   exit 1
 fi
 (cd "$REPO" && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$BIN" ./cmd/screentimed)
+# The planner's https helper sits next to the daemon, where it looks for it.
+(cd "$REPO" && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$REPO/bin/screentime-fetch" ./cmd/screentime-fetch)
 echo "built $BIN"
 
 mkdir -p "$UNIT_DIR"
