@@ -152,16 +152,7 @@ export function createMockBridge(): Bridge {
     return categories.find((c) => c.id === cid)?.name ?? 'Uncategorized';
   };
 
-  const PLANNER_DEFAULTS = {
-    plannerEnabled: false,
-    plannerProvider: 'local',
-    plannerEndpoint: '',
-    plannerModel: '',
-    plannerServerPath: '',
-    plannerModelPath: '',
-    plannerIdleMinutes: 5,
-  };
-  let settings: Settings & Record<string, unknown> = { ...DEFAULT_SETTINGS, ...PLANNER_DEFAULTS };
+  let settings: Settings = { ...DEFAULT_SETTINGS };
   const params = new URLSearchParams(location.search);
   // `?planner=local` or `?planner=remote` starts with the optional planner on and configured.
   const plannerParam = params.get('planner');
@@ -444,7 +435,7 @@ export function createMockBridge(): Bridge {
       web = [];
       if (everything) {
         limits = [];
-        settings = { ...DEFAULT_SETTINGS, ...PLANNER_DEFAULTS };
+        settings = { ...DEFAULT_SETTINGS };
         plannerKey = false;
       }
       return { ok: true };
