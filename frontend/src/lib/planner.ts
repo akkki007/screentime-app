@@ -160,8 +160,10 @@ export function notReadyReason(status: PlannerStatus, endpoint: string): string 
  * and not "off". (A local server that idled out may also report "off"; if the
  * daemon turns out to do that, relax this to `status.enabled`.)
  */
+// A local model that stopped after its idle timeout reports "off" too; the
+// next request starts it again, so the card stays.
 export function planCardVisible(status: Pick<PlannerStatus, 'enabled' | 'state'> | undefined) {
-  return Boolean(status?.enabled && status.state !== 'off');
+  return Boolean(status?.enabled);
 }
 
 // --- suggestions -> existing APIs ------------------------------------------

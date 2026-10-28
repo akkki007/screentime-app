@@ -175,10 +175,11 @@ describe('settings and readiness', () => {
       ),
     ).toBeUndefined();
   });
-  test('the plan card needs an enabled planner that is not off', () => {
+  test('the plan card shows whenever the planner is enabled', () => {
     expect(planCardVisible(status)).toBe(true);
     expect(planCardVisible({ ...status, state: 'starting' })).toBe(true);
-    expect(planCardVisible({ ...status, state: 'off' })).toBe(false);
+    // An idled-out local model is "off" but starts again on the next request.
+    expect(planCardVisible({ ...status, state: 'off' })).toBe(true);
     expect(planCardVisible({ ...status, enabled: false })).toBe(false);
     expect(planCardVisible(undefined)).toBe(false);
   });
