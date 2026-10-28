@@ -7,7 +7,7 @@ Sep 25, 2026 · @Akshay
 An open-source, local-first screentime and digital wellbeing app for Linux: track app usage, show insights, nudge breaks, enforce limits.
 
 - **First target:** Ubuntu, GNOME on Wayland (the maintainer's setup, and the hardest case).
-- **Later:** KDE Wayland, wlroots (Hyprland/Sway), X11.
+- **Later:** KDE Wayland, wlroots (Hyprland, Sway and others), X11.
 - **Principles:** local-only data, no telemetry, low idle footprint, pluggable per-desktop adapters.
 - **Non-goals (v1):** cloud sync, mobile, multi-user parental controls.
 
@@ -74,7 +74,7 @@ type FocusedWindow = { appId: string; title?: string; pid?: number; ts: number }
 | gnome-wayland | Own Shell extension that emits `FocusChanged` on the session bus | `org.gnome.Mutter.IdleMonitor` | v1 |
 | x11 | `_NET_ACTIVE_WINDOW` over the X protocol (xgb) | MIT-SCREEN-SAVER extension | v1.x |
 | kde-wayland | KWin script that calls the daemon over D-Bus ([ADR 11](adr/0011-kde-wayland-adapter.md)) | `ext-idle-notify-v1` | v2, implemented |
-| hyprland / sway | IPC socket events | `ext-idle-notify-v1` | v2 |
+| wlroots | `zwlr_foreign_toplevel_management_unstable_v1` ([ADR 12](adr/0012-wlroots-adapter.md)) | `ext-idle-notify-v1` | v2, implemented |
 
 - **App identity:** `appId` = the `.desktop` file ID (e.g. `org.mozilla.firefox`), with WM\_CLASS as the fallback. Icons and names come from the `.desktop` files.
 - **Window titles:** opt-in only, because they often contain private data.
