@@ -61,3 +61,40 @@ func DefaultFor(appID string) string {
 	}
 	return ""
 }
+
+// desktopRules map freedesktop.org Categories= values to built-in categories,
+// most specific first. FromDesktop returns the first rule that any listed
+// category satisfies, so "Utility;Development;" is Development: Utility,
+// System and Settings are the vaguest tokens and sit last. Email is
+// Productivity, like thunderbird and evolution in Defaults; Graphics is
+// Productivity too (creative work, not leisure). Network is Utilities unless
+// something more specific matched (browsers, chat, mail).
+var desktopRules = []struct {
+	name string
+	cats []string
+}{
+	{"Browsing", []string{"WebBrowser"}},
+	{"Development", []string{"IDE", "TerminalEmulator", "Debugger", "RevisionControl", "Development"}},
+	{"Communication", []string{"Chat", "InstantMessaging", "IRCClient", "VideoConference", "Telephony"}},
+	{"Productivity", []string{"Email", "Office", "Education", "Science", "Graphics"}},
+	{"Entertainment", []string{"Game", "AudioVideo", "Audio", "Video"}},
+	{"Utilities", []string{"Network", "System", "Settings", "Utility"}},
+}
+
+// FromDesktop returns the built-in category for a .desktop file's Categories,
+// or "" when none applies. Desktop-environment tokens (GNOME, GTK, KDE, Qt,
+// X-*) and unknown values are ignored.
+func FromDesktop(cats []string) string {
+	have := make(map[string]bool, len(cats))
+	for _, c := range cats {
+		have[c] = true
+	}
+	for _, r := range desktopRules {
+		for _, c := range r.cats {
+			if have[c] {
+				return r.name
+			}
+		}
+	}
+	return ""
+}

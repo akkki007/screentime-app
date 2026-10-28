@@ -7,9 +7,10 @@ import (
 )
 
 // Entry is what a .desktop file contributes: unlocalised Name and Icon, and
-// StartupWMClass for resolving X11 windows.
+// StartupWMClass for resolving X11 windows, and its freedesktop Categories.
 type Entry struct {
 	Name, Icon, StartupWMClass string
+	Categories                 []string
 }
 
 // Lookup finds the desktop entry for an app ID; ok is false if none exists.
@@ -40,11 +41,11 @@ func ApplicationDirs() []string {
 	)
 }
 
-// ParseEntry reads the first Name, Icon and StartupWMClass from the
-// [Desktop Entry] group.
+// ParseEntry reads the first Name, Icon, StartupWMClass and Categories from
+// the [Desktop Entry] group.
 func ParseEntry(text string) Entry {
 	var e Entry
-	var haveName, haveIcon, haveClass, inEntry bool
+	var haveName, haveIcon, haveClass, haveCats, inEntry bool
 	for _, raw := range strings.Split(text, "\n") {
 		line := strings.TrimSpace(raw)
 		if strings.HasPrefix(line, "[") {
@@ -66,6 +67,13 @@ func ParseEntry(text string) Entry {
 			e.Icon, haveIcon = value, true
 		case key == "StartupWMClass" && !haveClass:
 			e.StartupWMClass, haveClass = value, true
+		case key == "Categories" && !haveCats:
+			haveCats = true
+			for _, c := range strings.Split(value, ";") {
+				if c = strings.TrimSpace(c); c != "" {
+					e.Categories = append(e.Categories, c)
+				}
+			}
 		}
 	}
 	return e

@@ -91,6 +91,7 @@ func TestMigration0004StripsDesktopSuffixUnlessItCollides(t *testing.T) {
 	db := open(t, path)
 	for _, stmt := range []string{
 		"PRAGMA user_version = 3",
+		"ALTER TABLE apps DROP COLUMN category_source", // added by 0005, which re-runs
 		"INSERT INTO apps (app_id) VALUES ('org.gnome.Ptyxis.desktop'), ('org.mozilla.firefox.desktop'), ('org.mozilla.firefox'), ('plain')",
 	} {
 		if _, err := db.Exec(stmt); err != nil {
