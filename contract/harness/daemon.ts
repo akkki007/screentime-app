@@ -25,7 +25,7 @@ export type FixtureEnv = {
   seed: string;
 };
 
-export function daemonCommand(): string[] {
+function daemonCommand(): string[] {
   const custom = process.env.CONTRACT_DAEMON_CMD;
   if (custom) return custom.split(' ').filter(Boolean);
   return [join(ROOT, 'bin', 'screentimed')];

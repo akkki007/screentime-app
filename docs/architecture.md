@@ -43,7 +43,7 @@ The daemon and native host are Go; the dashboard, browser extension and shared s
 | --- | --- | --- |
 | Desktop shell | Wails v3 (WebKitGTK 4.1 via `-tags gtk3`, Go): a tray process, and one short-lived process per window | Tray and multiple windows built in; one 10 MB binary; a closed window gives all its memory back; see [ADR 9](adr/0009-wails-v3-ui-shell.md), [ADR 10](adr/0010-windows-run-as-their-own-processes.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
-| Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
+| Charts | Hand-written SVG (bars, donut) | uPlot was ~53 KB of the bundle for one bar chart; ECharts for one donut added ~400 KB. Both were dropped |
 | Daemon | Go (`cmd/screentimed`) | One small static binary (~8 MB, ~10 MB idle); build tags for per-OS providers |
 | D-Bus | `github.com/godbus/dbus/v5` on one persistent connection | Real idle watches and unicast signals; replaced the `gdbus` subprocess of [ADR 6](adr/0006-dbus-through-gdbus.md) |
 | Storage | SQLite via `modernc.org/sqlite` (pure Go, no cgo), WAL mode | Zero-dependency, fast, easy to back up |

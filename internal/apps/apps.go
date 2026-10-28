@@ -1,6 +1,5 @@
 // Package apps keeps the `apps` table: one row per app ID with its display
-// name, icon and category. Port of apps/daemon/src/apps.ts and
-// desktop-entries.ts.
+// name, icon and category.
 package apps
 
 import (

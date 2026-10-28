@@ -14,8 +14,7 @@
   },
   "dependencies": {
     "@screentime/shared": "workspace:*",
-    "@wailsio/runtime": "3.0.0-beta.28",
-    "uplot": "^1.6.31"
+    "@wailsio/runtime": "3.0.0-beta.28"
   },
   "devDependencies": {
     "@fontsource-variable/outfit": "^5.3.0",

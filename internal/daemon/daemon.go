@@ -1,5 +1,5 @@
 // Package daemon wires the tracker, web tracker, rules engine and RPC
-// handlers together. Port of apps/daemon/src/index.ts.
+// handlers together.
 //
 // One mutex serialises every entry point (RPC requests, provider callbacks
 // and the heartbeat), so the components can stay single-threaded like the

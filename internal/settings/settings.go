@@ -1,5 +1,5 @@
 // Package settings persists ipc.Settings in the `settings` table, one JSON
-// value per key. Port of apps/daemon/src/settings-store.ts.
+// value per key.
 package settings
 
 import (
