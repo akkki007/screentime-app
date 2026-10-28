@@ -153,6 +153,58 @@ export const LimitHitEventSchema = z.object({
 });
 export type LimitHitEvent = z.infer<typeof LimitHitEventSchema>;
 
+/** Planner status. The API key is never part of it. */
+export const PlannerStatusSchema = z.object({
+  enabled: z.boolean(),
+  provider: z.enum(['local', 'remote']),
+  /** "off" is also what a local planner reports while its sidecar is not running. */
+  state: z.enum(['off', 'starting', 'ready', 'error']),
+  /** Only meaningful for the local provider. */
+  serverFound: z.boolean(),
+  modelFound: z.boolean(),
+  keySet: z.boolean(),
+  /** Hostname a remote provider would contact; "" for local. */
+  host: z.string(),
+  lastError: z.string().nullable(),
+});
+export type PlannerStatus = z.infer<typeof PlannerStatusSchema>;
+
+/** Stored in `$DATA/screentime/planner.key` (0600), never in the database and never returned. Empty clears it. */
+export const PlannerSetKeyRequestSchema = z.object({ key: z.string().max(512) }).strict();
+
+export const PlannerSuggestRequestSchema = z
+  .object({ goal: z.string().max(500).optional() })
+  .strict();
+
+export const PlannerSuggestionSchema = z.object({
+  kind: z.enum(['limit', 'focus', 'break', 'note']),
+  /** An app that exists. A limit has an appId or a categoryId, never both. */
+  appId: z.string().optional(),
+  categoryId: z.number().int().optional(),
+  /** limit 5..1440, focus 5..180, break 1..60; absent for a note. */
+  minutes: z.number().int().optional(),
+  /** At most 200 characters. */
+  reason: z.string(),
+});
+export type PlannerSuggestion = z.infer<typeof PlannerSuggestionSchema>;
+
+/** Suggestions only: nothing is changed until the user accepts one in the UI. */
+export const PlannerSuggestResponseSchema = z.object({
+  summary: z.string(),
+  /** At most 8. */
+  suggestions: z.array(PlannerSuggestionSchema),
+});
+export type PlannerSuggestResponse = z.infer<typeof PlannerSuggestResponseSchema>;
+
+export const PlannerCategorizeRequestSchema = z
+  .object({ appIds: z.array(z.string().min(1).max(300)).max(50).optional() })
+  .strict();
+
+/** Apps the model categorised and the daemon applied (category_source 'model'). */
+export const PlannerCategorizeResponseSchema = z.array(
+  z.object({ appId: z.string(), categoryId: z.number().int(), confidence: z.number() }),
+);
+
 export const VersionHandshakeSchema = z.object({
   major: z.number().int(),
 });
@@ -230,6 +282,26 @@ export const RpcMethods = {
   },
   'data.wipe': {
     request: DataWipeRequestSchema,
+    response: z.object({ ok: z.boolean() }),
+  },
+  'planner.status': {
+    request: z.void(),
+    response: PlannerStatusSchema,
+  },
+  'planner.setKey': {
+    request: PlannerSetKeyRequestSchema,
+    response: z.object({ ok: z.boolean() }),
+  },
+  'planner.suggest': {
+    request: PlannerSuggestRequestSchema,
+    response: PlannerSuggestResponseSchema,
+  },
+  'planner.categorize': {
+    request: PlannerCategorizeRequestSchema.optional(),
+    response: PlannerCategorizeResponseSchema,
+  },
+  'planner.stop': {
+    request: z.void(),
     response: z.object({ ok: z.boolean() }),
   },
 } as const;
