@@ -140,7 +140,8 @@ What is done and what only a person on a real desktop can finish. Everything bel
 - An open window costs what WebKitGTK costs. The page is already plain (no blur, backdrop filters or animations; ~220 KB of script).
 - `scripts/soak -verify-only` over the day's data: 159 sessions, 0 faults (no overlaps or inverted sessions). The one long gap (7 h 31 m) matches the machine being suspended.
 - The tray item registers with the AppIndicator watcher; the native host runs and exits cleanly with no Bun on `PATH`; the dashboard maps in ~0.3 s.
-- Not yet measured: the 24 h reading of `screentimed`'s RSS (the soak is the way), and clicks on the tray menu and quick panel position on GNOME, which a person has to do.
+- **Soak** (`scripts/soak -for 24h -every 5m`, started 2026-10-10 20:42, on the same session): 146 RSS samples, **5.5 to 15.4 MB (mean 10.8, last 10.4)**, no growth. The run was cut off by a reboot before its summary, so the totals come from `-verify-only -since` over the database: **4,707 sessions, 72 h 26 m tracked, 0 faults** (no overlapping or inverted sessions) across 130 gaps, which line up with suspends, locks and idle periods, with the daemon restarted several times in between.
+- Not yet measured: clicks on the tray menu and the quick panel's position on GNOME, which a person has to do.
 
 #### Runbook for the on-hardware checks (issues #24, #25, #27, and #3)
 
