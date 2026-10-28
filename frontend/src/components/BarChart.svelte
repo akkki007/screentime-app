@@ -46,6 +46,12 @@ const barW = $derived(Math.min(slot * 0.62, 48));
 const cx = (i: number) => LEFT + (i + 0.6) * slot;
 const y = (v: number) => TOP + plotH * (1 - v / top);
 
+/** A bar with only its top corners rounded, so it sits flat on the axis. */
+function bar(x: number, y0: number, w: number, h: number): string {
+  const r = Math.min(w * 0.28, h);
+  return `M${x},${y0 + h}V${y0 + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${y0 + h}Z`;
+}
+
 function move(e: MouseEvent) {
   const box = (e.currentTarget as SVGElement).getBoundingClientRect();
   const i = Math.round(((e.clientX - box.left - LEFT) / plotW) * n - 0.6);
@@ -70,12 +76,8 @@ function move(e: MouseEvent) {
 			{/each}
 			{#each values as v, i}
 				{#if v > 0}
-					<rect
-						x={cx(i) - barW / 2}
-						y={y(v)}
-						width={barW}
-						height={y(0) - y(v)}
-						rx={barW * 0.28}
+					<path
+						d={bar(cx(i) - barW / 2, y(v), barW, y(0) - y(v))}
 						fill="var(--accent)"
 						fill-opacity={i === highlight ? 1 : 0.6}
 					/>
