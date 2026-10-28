@@ -338,6 +338,45 @@
           "onboardingDone": {
             "type": "boolean",
             "default": false
+          },
+          "plannerEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "plannerProvider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ],
+            "default": "local"
+          },
+          "plannerEndpoint": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^(https?:\\/\\/[^\\s]+)?$",
+            "default": ""
+          },
+          "plannerModel": {
+            "type": "string",
+            "maxLength": 100,
+            "default": ""
+          },
+          "plannerServerPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerModelPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerIdleMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
           }
         },
         "additionalProperties": true
@@ -390,6 +429,45 @@
           "onboardingDone": {
             "type": "boolean",
             "default": false
+          },
+          "plannerEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "plannerProvider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ],
+            "default": "local"
+          },
+          "plannerEndpoint": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^(https?:\\/\\/[^\\s]+)?$",
+            "default": ""
+          },
+          "plannerModel": {
+            "type": "string",
+            "maxLength": 100,
+            "default": ""
+          },
+          "plannerServerPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerModelPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerIdleMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
           }
         },
         "additionalProperties": false
@@ -440,6 +518,45 @@
           "onboardingDone": {
             "type": "boolean",
             "default": false
+          },
+          "plannerEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "plannerProvider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ],
+            "default": "local"
+          },
+          "plannerEndpoint": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^(https?:\\/\\/[^\\s]+)?$",
+            "default": ""
+          },
+          "plannerModel": {
+            "type": "string",
+            "maxLength": 100,
+            "default": ""
+          },
+          "plannerServerPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerModelPath": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          },
+          "plannerIdleMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "default": 5
           }
         },
         "additionalProperties": true
@@ -812,6 +929,210 @@
         },
         "additionalProperties": true
       },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "planner.status": {
+      "params": null,
+      "result": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "off",
+              "starting",
+              "ready",
+              "error"
+            ]
+          },
+          "serverFound": {
+            "type": "boolean"
+          },
+          "modelFound": {
+            "type": "boolean"
+          },
+          "keySet": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "enabled",
+          "provider",
+          "state",
+          "serverFound",
+          "modelFound",
+          "keySet",
+          "host",
+          "lastError"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "planner.setKey": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "planner.suggest": {
+      "params": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "limit",
+                    "focus",
+                    "break",
+                    "note"
+                  ]
+                },
+                "appId": {
+                  "type": "string"
+                },
+                "categoryId": {
+                  "type": "integer"
+                },
+                "minutes": {
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "reason"
+              ],
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "summary",
+          "suggestions"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "planner.categorize": {
+      "params": {
+        "anyOf": [
+          {
+            "not": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "appIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "maxItems": 50
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "appId": {
+              "type": "string"
+            },
+            "categoryId": {
+              "type": "integer"
+            },
+            "confidence": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "appId",
+            "categoryId",
+            "confidence"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "planner.stop": {
+      "params": null,
       "result": {
         "type": "object",
         "properties": {

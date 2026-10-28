@@ -65,6 +65,13 @@ func Apply(s *ipc.Settings, p ipc.SettingsPatch) {
 	setStr(&s.DowntimeStart, p.DowntimeStart)
 	setStr(&s.DowntimeEnd, p.DowntimeEnd)
 	setBool(&s.OnboardingDone, p.OnboardingDone)
+	setBool(&s.PlannerEnabled, p.PlannerEnabled)
+	setStr(&s.PlannerProvider, p.PlannerProvider)
+	setStr(&s.PlannerEndpoint, p.PlannerEndpoint)
+	setStr(&s.PlannerModel, p.PlannerModel)
+	setStr(&s.PlannerServerPath, p.PlannerServerPath)
+	setStr(&s.PlannerModelPath, p.PlannerModelPath)
+	setInt(&s.PlannerIdleMinutes, p.PlannerIdleMinutes)
 }
 
 // Patch persists a validated partial update and returns the full settings.
@@ -84,6 +91,13 @@ func Patch(db *sql.DB, p ipc.SettingsPatch) (ipc.Settings, error) {
 	put("downtimeStart", p.DowntimeStart != nil, p.DowntimeStart)
 	put("downtimeEnd", p.DowntimeEnd != nil, p.DowntimeEnd)
 	put("onboardingDone", p.OnboardingDone != nil, p.OnboardingDone)
+	put("plannerEnabled", p.PlannerEnabled != nil, p.PlannerEnabled)
+	put("plannerProvider", p.PlannerProvider != nil, p.PlannerProvider)
+	put("plannerEndpoint", p.PlannerEndpoint != nil, p.PlannerEndpoint)
+	put("plannerModel", p.PlannerModel != nil, p.PlannerModel)
+	put("plannerServerPath", p.PlannerServerPath != nil, p.PlannerServerPath)
+	put("plannerModelPath", p.PlannerModelPath != nil, p.PlannerModelPath)
+	put("plannerIdleMinutes", p.PlannerIdleMinutes != nil, p.PlannerIdleMinutes)
 
 	tx, err := db.Begin()
 	if err != nil {

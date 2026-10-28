@@ -15,11 +15,12 @@ An open-source, local-first screentime and digital wellbeing app for Linux: trac
 - **Nudges**: daily limits for an app, category or website; break reminders; a downtime window; focus mode.
 - **Per-site time** with an optional browser extension (hostnames only, private windows ignored).
 - **Yours**: export to CSV/JSON, delete your history in one click.
+- **Optional daily planner and AI categorisation** (off by default): suggests limits, focus sessions and breaks, and files apps the rules could not place. Runs on a small local `llama-server` model you provide, or on your own API key for any OpenAI-compatible endpoint. It only ever sees totals, never window titles or sites, and it only suggests: you accept or ignore.
 
 ## Principles
 
 - **Local-only data.** Everything lives in `~/.local/share/screentime/`. Nothing is uploaded anywhere.
-- **No telemetry.** The daemon never makes a network call.
+- **No telemetry.** The daemon makes no network call unless you turn on the optional planner with a remote provider; then it sends aggregates only (per-app and per-category totals, app names, your goal text) to the endpoint you entered, over https. With the planner off, which is the default, it makes none.
 - **Low idle footprint.** The tracker is a single static Go binary of about 8 MB that idles around 10 MB resident, at about 0.03% of a CPU. The tray app is 37 MB while no window is open, and each window runs as its own process that gives everything back when you close it. An open dashboard is about 270 MB, nearly all of it WebKitGTK itself. (Measured on Ubuntu 26.04, GNOME on Wayland; see the [migration notes](docs/migration-to-go.md).) It is a background service, not an Electron app running 24/7.
 - **Pluggable per-desktop adapters.** GNOME Wayland and X11 now; KDE Wayland and wlroots compositors (sway, Hyprland, river, labwc, Wayfire) implemented but not yet tried on a real session.
 
@@ -98,7 +99,7 @@ Contributions are very welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Good 
 
 ## Privacy promise
 
-- No network calls from the daemon, ever.
+- No network calls from the daemon, unless you enable the optional planner with a remote provider (off by default). Then only aggregates (totals, app names, your goal) go to the endpoint you entered, over https (plain http only to localhost), and never window titles or hostnames. The API key is stored in its own 0600 file and never leaves it except in the request to that endpoint.
 - All data stays in `~/.local/share/screentime/`.
 - Window titles are off by default (opt-in only).
 - The browser extension sends only the hostname, never the page path, query or title.

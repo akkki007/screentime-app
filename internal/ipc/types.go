@@ -81,6 +81,16 @@ type Settings struct {
 	DowntimeStart         string `json:"downtimeStart"`
 	DowntimeEnd           string `json:"downtimeEnd"`
 	OnboardingDone        bool   `json:"onboardingDone"`
+
+	// The optional planner (ADR 8). Off by default; the daemon does nothing
+	// planner-related until PlannerEnabled is true.
+	PlannerEnabled     bool   `json:"plannerEnabled"`
+	PlannerProvider    string `json:"plannerProvider"` // "local" | "remote"
+	PlannerEndpoint    string `json:"plannerEndpoint"` // remote base URL
+	PlannerModel       string `json:"plannerModel"`    // remote model name
+	PlannerServerPath  string `json:"plannerServerPath"`
+	PlannerModelPath   string `json:"plannerModelPath"`
+	PlannerIdleMinutes int64  `json:"plannerIdleMinutes"`
 }
 
 // DefaultSettings is DEFAULT_SETTINGS: privacy-sensitive options off.
@@ -90,6 +100,8 @@ var DefaultSettings = Settings{
 	BreakLengthMinutes:   5,
 	DowntimeStart:        "22:00",
 	DowntimeEnd:          "07:00",
+	PlannerProvider:      "local",
+	PlannerIdleMinutes:   5,
 }
 
 // SettingsPatch is a partial update; nil fields are left unchanged.
@@ -103,6 +115,14 @@ type SettingsPatch struct {
 	DowntimeStart         *string
 	DowntimeEnd           *string
 	OnboardingDone        *bool
+
+	PlannerEnabled     *bool
+	PlannerProvider    *string
+	PlannerEndpoint    *string
+	PlannerModel       *string
+	PlannerServerPath  *string
+	PlannerModelPath   *string
+	PlannerIdleMinutes *int64
 }
 
 type DataExportRequest struct {
@@ -143,6 +163,9 @@ type OK struct {
 var (
 	clockRe    = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 	scheduleRe = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$`)
+	// Empty clears it. Anything else must be an http(s) URL with no spaces; the
+	// planner checks the rest (https unless loopback, no credentials).
+	httpURLRe = regexp.MustCompile(`^(https?://[^\s]+)?$`)
 )
 
 const maxMinutes = 24 * 60
@@ -233,6 +256,13 @@ func ParseSettingsPatch(params json.RawMessage) (SettingsPatch, error) {
 	p.DowntimeStart = optClock("downtimeStart")
 	p.DowntimeEnd = optClock("downtimeEnd")
 	p.OnboardingDone = optBool("onboardingDone")
+	p.PlannerEnabled = optBool("plannerEnabled")
+	p.PlannerProvider = o.OptEnum("plannerProvider", "local", "remote")
+	p.PlannerEndpoint = o.OptString("plannerEndpoint", 200, httpURLRe, "expected an http(s) URL")
+	p.PlannerModel = o.OptString("plannerModel", 100, nil, "")
+	p.PlannerServerPath = o.OptString("plannerServerPath", 300, nil, "")
+	p.PlannerModelPath = o.OptString("plannerModelPath", 300, nil, "")
+	p.PlannerIdleMinutes = optInt("plannerIdleMinutes", 1, 60)
 	o.strict()
 	return p, o.done()
 }

@@ -132,6 +132,10 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 | `tracker.pause` / `.resume` / `.status` | UI → daemon | `{minutes}` → `{resumeAt}` / `{ok}` / current state |
 | `focus.start` / `.stop` | UI → daemon | `{minutes}` → `{until}` / `{ok}` |
 | `data.export` / `data.wipe` | UI → daemon | `{format, from?, to?}` → `{filename, content}` / `{everything}` → `{ok}` |
+| `planner.status` / `.stop` | UI → daemon | none → `{enabled, provider, state, serverFound, modelFound, keySet, host, lastError}` / `{ok}`. Optional planner, see ADR 8; works while it is off |
+| `planner.setKey` | UI → daemon | `{key}` (empty clears) → `{ok}`; stored in `planner.key` (0600), never returned |
+| `planner.suggest` | UI → daemon | `{goal?}` → `{summary, suggestions: [{kind, appId?, categoryId?, minutes?, reason}]}`; validated, never applies anything. Error "planner is off" when disabled |
+| `planner.categorize` | UI → daemon | `{appIds?}` → `[{appId, categoryId, confidence}]`; only auto-categorised apps left in Other, stored with `category_source = model` |
 | `event.status` | daemon → UI (notification) | full tracker status, on any state change |
 | `event.focus` | daemon → UI (notification) | `{appId, since}`, for a live "now" view |
 | `event.limitHit` | daemon → UI (notification) | `{limitId, action}` |
@@ -201,7 +205,7 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 - **Docs:** `docs/architecture.md` (this doc), `docs/adapters.md` (how to add a desktop), ADRs in `docs/adr/`.
 - **CI:** lint, typecheck, `bun test`, and a build of every package on each PR. Tagged releases publish the .deb and AppImage.
 - **Conventions:** Conventional Commits, semver, changesets for the changelog.
-- **Privacy promise:** no network calls from the daemon, data stays in `~/.local/share`, titles off by default, one-click data wipe (Settings → Your data). The browser extension sends only the hostname, never the path, query or title, and ignores private windows. This is in the README.
+- **Privacy promise:** no network calls from the daemon (except the optional, off-by-default planner with a remote provider, aggregates only), data stays in `~/.local/share`, titles off by default, one-click data wipe (Settings → Your data). The browser extension sends only the hostname, never the path, query or title, and ignores private windows. This is in the README.
 - **Good first contributions:** new desktop adapters, app categories, UI translations.
 
 ## Risks and open questions
