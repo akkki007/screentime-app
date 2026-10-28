@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/akkki007/screentime-app/internal/apps"
 	"github.com/akkki007/screentime-app/internal/daemon"
 	"github.com/akkki007/screentime-app/internal/focus"
+	"github.com/akkki007/screentime-app/internal/planner"
 	"github.com/akkki007/screentime-app/internal/rpc"
 	"github.com/akkki007/screentime-app/internal/store"
 )
@@ -94,6 +96,9 @@ func run() error {
 		Now:      now,
 		Lookup:   apps.DirLookup(dirs),
 		Debug:    os.Getenv("SCREENTIME_DEBUG") == "1",
+		// Used only once the optional planner is switched on.
+		PlannerKeyPath: planner.KeyPath(filepath.Dir(store.DefaultPath())),
+		PlannerRunDir:  filepath.Dir(sock),
 	})
 	if err != nil {
 		return err

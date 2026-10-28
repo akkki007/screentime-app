@@ -53,6 +53,14 @@ type Handler interface {
 	Handle(method string, params json.RawMessage) (any, error)
 }
 
+// AsyncHandler is an optional Handler extension: requests for a method it
+// reports as async are answered from their own goroutine, so a method that
+// takes minutes (the planner) does not stall the connection. Responses may
+// then arrive out of order, which JSON-RPC allows, as ids tell them apart.
+type AsyncHandler interface {
+	IsAsync(method string) bool
+}
+
 // IsLive reports whether a daemon is already accepting connections at path.
 func IsLive(path string) bool {
 	conn, err := net.DialTimeout("unix", path, time.Second)
@@ -289,15 +297,28 @@ func (s *Server) handleLine(c *client, line []byte) {
 		return
 	}
 
-	result, err := s.handler.Handle(method, req.Params)
-	switch {
-	case errors.Is(err, ErrMethodNotFound):
-		respond(nil, &rpcError{CodeMethodNotFound, "method not found: " + method})
-	case err != nil:
-		respond(nil, &rpcError{CodeInternal, err.Error()})
-	default:
-		respond(result, nil)
+	run := func() {
+		result, err := s.handler.Handle(method, req.Params)
+		switch {
+		case errors.Is(err, ErrMethodNotFound):
+			respond(nil, &rpcError{CodeMethodNotFound, "method not found: " + method})
+		case err != nil:
+			respond(nil, &rpcError{CodeInternal, err.Error()})
+		default:
+			respond(result, nil)
+		}
 	}
+	// A slow method must not hold up this client's other requests, which are
+	// read on this goroutine, one after another.
+	if a, ok := s.handler.(AsyncHandler); ok && a.IsAsync(method) {
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			run()
+		}()
+		return
+	}
+	run()
 }
 
 // versionParam renders params.major the way the Bun daemon's message did

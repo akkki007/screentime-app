@@ -18,6 +18,7 @@ import (
 	"github.com/akkki007/screentime-app/internal/focus"
 	"github.com/akkki007/screentime-app/internal/ipc"
 	"github.com/akkki007/screentime-app/internal/notify"
+	"github.com/akkki007/screentime-app/internal/planner"
 	"github.com/akkki007/screentime-app/internal/queries"
 	"github.com/akkki007/screentime-app/internal/rpc"
 	"github.com/akkki007/screentime-app/internal/rules"
@@ -42,6 +43,11 @@ type Config struct {
 	Now      func() int64
 	Lookup   apps.Lookup
 	Debug    bool
+
+	// Where the optional planner keeps its API key and its sidecar's runtime
+	// files. Only used once the planner is enabled.
+	PlannerKeyPath string
+	PlannerRunDir  string
 }
 
 // Daemon is the running core.
@@ -53,6 +59,11 @@ type Daemon struct {
 	web      *tracker.WebTracker
 	rules    *rules.Engine
 	hub      Broadcaster
+
+	// planner is nil while the feature is off (the default): no goroutine, no
+	// process, no file access, nothing but this pointer.
+	planner *planner.Planner
+	closing sync.WaitGroup // planners being stopped in the background
 }
 
 // New builds the daemon; call SetBroadcaster once the RPC server exists,
@@ -66,6 +77,7 @@ func New(cfg Config) (*Daemon, error) {
 		return nil, err
 	}
 	d := &Daemon{cfg: cfg, settings: s, hub: nobody{}}
+	d.syncPlanner()
 
 	var debug func(string)
 	if cfg.Debug {
@@ -136,6 +148,8 @@ func (d *Daemon) Stop() {
 		d.tracker.Stop()
 		d.web.CloseAt(d.cfg.Now())
 	})
+	// The sidecar must not outlive the daemon; wait for it to exit.
+	d.closePlanner()
 }
 
 func (d *Daemon) onTrackerEvent(e tracker.Event) {
@@ -182,6 +196,11 @@ func (d *Daemon) configureTracker() {
 
 // Handle implements rpc.Handler.
 func (d *Daemon) Handle(method string, params json.RawMessage) (result any, err error) {
+	// Planner methods run outside the daemon's lock: a model call takes
+	// seconds to minutes and must never hold up ticks or other requests.
+	if isPlannerMethod(method) {
+		return d.handlePlanner(method, params)
+	}
 	d.locked(func() { result, err = d.handle(method, params) })
 	return result, err
 }
@@ -261,6 +280,7 @@ func (d *Daemon) handle(method string, params json.RawMessage) (any, error) {
 		}
 		d.settings = s
 		d.configureTracker()
+		d.syncPlanner()
 		return s, nil
 
 	case "tracker.pause":
@@ -321,6 +341,8 @@ func (d *Daemon) handle(method string, params json.RawMessage) (any, error) {
 			}
 			d.settings = s
 			d.configureTracker()
+			d.syncPlanner()
+			planner.RemoveKey(d.cfg.PlannerKeyPath) // a full reset forgets the API key too
 		}
 		return ipc.OK{OK: true}, nil
 
