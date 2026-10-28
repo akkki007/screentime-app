@@ -16,6 +16,7 @@ import (
 	"github.com/akkki007/screentime-app/internal/apps"
 	"github.com/akkki007/screentime-app/internal/focus"
 	"github.com/akkki007/screentime-app/internal/ipc"
+	"github.com/akkki007/screentime-app/internal/sandbox"
 	"github.com/akkki007/screentime-app/internal/store"
 )
 
@@ -396,4 +397,65 @@ func fakeEndpointAnswering(t *testing.T, content string) string {
 
 func fakeEndpoint(t *testing.T) string {
 	return fakeEndpointAnswering(t, `{"summary":"A plan.","suggestions":[{"kind":"note","appId":null,"category":null,"minutes":null,"reason":"Take it easy."}]}`)
+}
+
+// Turning the planner on grants the unit network access and restarts it once;
+// turning it off takes it away again (internal/sandbox).
+func TestPlannerTogglesTheUnitsNetworkAccess(t *testing.T) {
+	restartDelay = 0
+	t.Cleanup(func() { restartDelay = 500 * time.Millisecond })
+	dir := t.TempDir()
+	db, err := store.Open(filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	restarts := make(chan struct{}, 4)
+	unit := &sandbox.Unit{Dir: filepath.Join(dir, "unit.d"), Restart: func() error {
+		restarts <- struct{}{}
+		return nil
+	}}
+	d, err := New(Config{
+		DB: db, Provider: noProvider{}, Notifier: quiet{},
+		Now:            func() int64 { return now },
+		Lookup:         func(string) (apps.Entry, bool) { return apps.Entry{}, false },
+		PlannerKeyPath: filepath.Join(dir, "data", "planner.key"),
+		PlannerRunDir:  filepath.Join(dir, "run"),
+		Unit:           unit,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(d.Stop)
+	dropIn := filepath.Join(unit.Dir, sandbox.DropInName)
+	waitRestart := func(what string) {
+		t.Helper()
+		select {
+		case <-restarts:
+		case <-time.After(2 * time.Second):
+			t.Fatalf("no restart after %s", what)
+		}
+	}
+
+	// Off by default: no drop-in and no restart at start.
+	if _, err := os.Stat(dropIn); !os.IsNotExist(err) {
+		t.Fatalf("drop-in exists with the planner off: %v", err)
+	}
+	mustCall(t, d, "settings.set", `{"plannerEnabled":true}`)
+	waitRestart("turning on")
+	if _, err := os.Stat(dropIn); err != nil {
+		t.Fatalf("no drop-in with the planner on: %v", err)
+	}
+	// Changing another planner setting must not restart again.
+	mustCall(t, d, "settings.set", `{"plannerIdleMinutes":7}`)
+	mustCall(t, d, "settings.set", `{"plannerEnabled":false}`)
+	waitRestart("turning off")
+	if _, err := os.Stat(dropIn); !os.IsNotExist(err) {
+		t.Fatalf("drop-in kept with the planner off: %v", err)
+	}
+	select {
+	case <-restarts:
+		t.Fatal("restarted more than once per change")
+	case <-time.After(100 * time.Millisecond):
+	}
 }

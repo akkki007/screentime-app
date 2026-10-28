@@ -2,11 +2,14 @@ package daemon
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/akkki007/screentime-app/internal/ipc"
 	"github.com/akkki007/screentime-app/internal/planner"
 	"github.com/akkki007/screentime-app/internal/rpc"
+	"github.com/akkki007/screentime-app/internal/sandbox"
 )
 
 // The optional planner (ADR 8) is wired in here and nowhere else. While
@@ -57,6 +60,40 @@ func (d *Daemon) syncPlanner() {
 			defer d.closing.Done()
 			p.Close()
 		}()
+	}
+}
+
+// restartDelay lets the settings.set reply reach the UI before the unit
+// restarts; the UI reconnects on its own.
+var restartDelay = 500 * time.Millisecond
+
+// syncNetwork gives the daemon's systemd unit network access while the
+// planner is on, and takes it away when it is off, restarting the unit once
+// for either change (internal/sandbox). Outside systemd it does nothing.
+// The caller holds d.mu, or is New.
+func (d *Daemon) syncNetwork() {
+	u := d.cfg.Unit
+	if u == nil {
+		return
+	}
+	changed, err := u.Sync(d.settings.PlannerEnabled)
+	switch {
+	case err != nil:
+		log.Printf("[planner] could not update the service's network access: %v", err)
+	case changed:
+		log.Printf("[planner] restarting once to apply the planner's network access (on: %v)", d.settings.PlannerEnabled)
+		d.closing.Add(1)
+		go func() {
+			defer d.closing.Done()
+			time.Sleep(restartDelay)
+			if err := u.Restart(); err != nil {
+				log.Printf("[planner] restart failed: %v", err)
+			}
+		}()
+	case d.settings.PlannerEnabled && !sandbox.NetworkAllowed():
+		// The drop-in is in place but the unit still denies TCP: an admin
+		// override, or an older systemd. Say so rather than restart in a loop.
+		log.Print("[planner] the service still blocks network access; the planner cannot reach a model server")
 	}
 }
 

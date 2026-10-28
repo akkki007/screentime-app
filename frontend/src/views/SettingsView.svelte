@@ -78,7 +78,7 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 		<Card title="Planner (optional)">
 			<SettingRow
 				title="Daily planner and smarter categories"
-				description="Optional and off by default. A small AI model plans your day and sorts uncategorized apps. It needs a model file you download yourself or your own API key."
+				description="Optional and off by default. A small AI model plans your day and sorts uncategorized apps. It needs a model file you download yourself or your own API key. Switching it on or off restarts the tracker once, to grant or remove its network access."
 			>
 				<Toggle
 					label="Daily planner and smarter categories"

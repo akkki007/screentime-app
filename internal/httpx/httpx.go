@@ -240,6 +240,9 @@ func Transport(err error) error {
 	if errors.As(err, &ne) && ne.Timeout() {
 		return &ConnError{errors.New("the request timed out")}
 	}
+	if errors.Is(err, syscall.EAFNOSUPPORT) {
+		return &ConnError{errors.New("network access is blocked for the tracker's service; turn the planner off and on again to grant it")}
+	}
 	if errors.Is(err, context.Canceled) {
 		return &ConnError{errors.New("the request was cancelled")}
 	}

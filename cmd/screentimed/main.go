@@ -31,6 +31,7 @@ import (
 	"github.com/akkki007/screentime-app/internal/focus"
 	"github.com/akkki007/screentime-app/internal/planner"
 	"github.com/akkki007/screentime-app/internal/rpc"
+	"github.com/akkki007/screentime-app/internal/sandbox"
 	"github.com/akkki007/screentime-app/internal/store"
 )
 
@@ -99,6 +100,7 @@ func run() error {
 		// Used only once the optional planner is switched on.
 		PlannerKeyPath: planner.KeyPath(filepath.Dir(store.DefaultPath())),
 		PlannerRunDir:  filepath.Dir(sock),
+		Unit:           sandbox.Detect(),
 	})
 	if err != nil {
 		return err

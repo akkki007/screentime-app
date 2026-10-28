@@ -22,6 +22,7 @@ import (
 	"github.com/akkki007/screentime-app/internal/queries"
 	"github.com/akkki007/screentime-app/internal/rpc"
 	"github.com/akkki007/screentime-app/internal/rules"
+	"github.com/akkki007/screentime-app/internal/sandbox"
 	"github.com/akkki007/screentime-app/internal/settings"
 	"github.com/akkki007/screentime-app/internal/tracker"
 )
@@ -48,6 +49,9 @@ type Config struct {
 	// files. Only used once the planner is enabled.
 	PlannerKeyPath string
 	PlannerRunDir  string
+	// Unit is the systemd unit the daemon runs as, nil outside one. Turning
+	// the planner on or off adjusts its network access (internal/sandbox).
+	Unit *sandbox.Unit
 }
 
 // Daemon is the running core.
@@ -78,6 +82,7 @@ func New(cfg Config) (*Daemon, error) {
 	}
 	d := &Daemon{cfg: cfg, settings: s, hub: nobody{}}
 	d.syncPlanner()
+	d.syncNetwork()
 
 	var debug func(string)
 	if cfg.Debug {
@@ -281,6 +286,7 @@ func (d *Daemon) handle(method string, params json.RawMessage) (any, error) {
 		d.settings = s
 		d.configureTracker()
 		d.syncPlanner()
+		d.syncNetwork()
 		return s, nil
 
 	case "tracker.pause":
