@@ -6,8 +6,3 @@ package notify
 type Notifier interface {
 	Notify(title, body string)
 }
-
-// Discard drops every notification.
-type Discard struct{}
-
-func (Discard) Notify(string, string) {}

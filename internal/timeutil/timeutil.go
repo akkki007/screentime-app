@@ -2,7 +2,7 @@
 // UTC everywhere; only the boundaries of "a day" and "an hour" depend on the
 // user's time zone (time.Local, which honours $TZ).
 //
-// Ported from apps/daemon/src/time.ts. Like JavaScript's Date, time.Date
+// Like JavaScript's Date, time.Date
 // normalises out-of-range fields (Feb 31 becomes Mar 3), so both agree.
 package timeutil
 

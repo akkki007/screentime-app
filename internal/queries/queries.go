@@ -1,5 +1,5 @@
-// Package queries answers the read and write RPCs over the database. Port
-// of apps/daemon/src/queries.ts; contract/ fixtures pin the results.
+// Package queries answers the read and write RPCs over the database. The
+// contract/ fixtures pin the results.
 package queries
 
 import (

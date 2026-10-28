@@ -1,5 +1,5 @@
 // Package rules is the wellbeing engine: daily limits, break reminders,
-// downtime and focus mode. Port of apps/daemon/src/rules.ts.
+// downtime and focus mode.
 //
 // Everything is derived from the database and the clock on each Tick rather
 // than from timers, so a suspend can't make a limit miss or double-fire:

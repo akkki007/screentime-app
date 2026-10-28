@@ -1,6 +1,5 @@
 // Package rpc serves JSON-RPC 2.0 over a Unix socket, one JSON message per
-// line (docs/architecture.md#ipc-contracts). Port of
-// apps/daemon/src/rpc-server.ts.
+// line (docs/architecture.md#ipc-contracts).
 //
 // Security requirements (docs/migration-to-go.md):
 //   - S2: the socket directory must be a real directory owned by this user,
