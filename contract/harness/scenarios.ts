@@ -7,7 +7,7 @@
  */
 import type { FixtureEnv, Message } from './daemon';
 
-export const NOW = 1790762400000;
+const NOW = 1790762400000;
 export const ENV: FixtureEnv = { now: NOW, tz: 'Asia/Kolkata', seed: 'seed.sql' };
 
 const MIN = 60_000;
@@ -15,7 +15,7 @@ const DAY = 24 * 60 * MIN;
 /** Local midnight starting Sep 30 (today) in Asia/Kolkata. */
 const TODAY = 1790706600000;
 
-export type Step = Message | string;
+type Step = Message | string;
 export type Scenario = { name: string; description: string; steps: Step[] };
 
 /** Builds requests with ids counting up from 1 within one scenario. */

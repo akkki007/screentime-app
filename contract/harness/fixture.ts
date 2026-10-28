@@ -15,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { FIXTURES_DIR, type FixtureEnv, type Message } from './daemon';
 
-export type Exchange = { send: Message | string; receive: Message[] };
+type Exchange = { send: Message | string; receive: Message[] };
 export type Fixture = {
   scenario: string;
   description: string;
