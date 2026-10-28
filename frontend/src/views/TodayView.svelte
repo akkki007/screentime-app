@@ -4,6 +4,7 @@ import BarChart from '../components/BarChart.svelte';
 import Card from '../components/Card.svelte';
 import Donut from '../components/Donut.svelte';
 import NowCard from '../components/NowCard.svelte';
+import PlannerSlot from '../components/PlannerSlot.svelte';
 import StatTile from '../components/StatTile.svelte';
 import Timeline from '../components/Timeline.svelte';
 import UsageList from '../components/UsageList.svelte';
@@ -138,6 +139,8 @@ const dateText = new Date().toLocaleDateString(undefined, {
       </p>
     </div>
   </section>
+
+  <PlannerSlot load={() => import('../components/PlanCard.svelte')} />
 
   {#if loadError}
     <p class="rounded-2xl bg-bad/10 p-3 text-sm text-bad" role="alert">{loadError}</p>
