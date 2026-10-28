@@ -152,8 +152,37 @@ export function createMockBridge(): Bridge {
     return categories.find((c) => c.id === cid)?.name ?? 'Uncategorized';
   };
 
-  let settings: Settings = { ...DEFAULT_SETTINGS };
+  const PLANNER_DEFAULTS = {
+    plannerEnabled: false,
+    plannerProvider: 'local',
+    plannerEndpoint: '',
+    plannerModel: '',
+    plannerServerPath: '',
+    plannerModelPath: '',
+    plannerIdleMinutes: 5,
+  };
+  let settings: Settings & Record<string, unknown> = { ...DEFAULT_SETTINGS, ...PLANNER_DEFAULTS };
   const params = new URLSearchParams(location.search);
+  // `?planner=local` or `?planner=remote` starts with the optional planner on and configured.
+  const plannerParam = params.get('planner');
+  let plannerKey = false;
+  if (plannerParam === '1' || plannerParam === 'local' || plannerParam === 'remote') {
+    const remote = plannerParam === 'remote';
+    settings = {
+      ...settings,
+      plannerEnabled: true,
+      plannerProvider: remote ? 'remote' : 'local',
+      plannerEndpoint: remote ? 'https://api.example-llm.com/v1' : '',
+      plannerModel: remote ? 'small-instruct' : '',
+      plannerModelPath: remote ? '' : '~/models/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    };
+    plannerKey = remote;
+    // Leave two apps unsorted so "Suggest categories" has something to do.
+    for (const id of ['org.gnome.Evince', 'com.valvesoftware.Steam']) {
+      const app = apps.find((a) => a.appId === id);
+      if (app) app.categoryId = null;
+    }
+  }
   if (params.get('onboarding') !== '1') settings.onboardingDone = true;
   if (params.get('breaks') === '1')
     settings = { ...settings, breakRemindersEnabled: true, downtimeEnabled: true };
@@ -234,9 +263,106 @@ export function createMockBridge(): Bridge {
       ) {
         throw new Error('idleThresholdMinutes: Number must be between 1 and 60');
       }
+      const p = patch as Record<string, unknown>;
+      const idle = p.plannerIdleMinutes;
+      if (typeof idle === 'number' && (!Number.isInteger(idle) || idle < 1 || idle > 60)) {
+        throw new Error('plannerIdleMinutes: Number must be between 1 and 60');
+      }
+      for (const [k, max] of [
+        ['plannerEndpoint', 200],
+        ['plannerModel', 100],
+        ['plannerServerPath', 300],
+        ['plannerModelPath', 300],
+      ] as const) {
+        if (typeof p[k] === 'string' && (p[k] as string).length > max) {
+          throw new Error(`${k}: String must contain at most ${max} character(s)`);
+        }
+      }
       settings = { ...settings, ...patch };
       return settings;
     },
+    // --- optional planner (fixtures; the real thing is the daemon's) ---
+    'planner.status': () => {
+      const on = settings.plannerEnabled === true;
+      const remote = settings.plannerProvider === 'remote';
+      const endpoint = String(settings.plannerEndpoint ?? '');
+      let host = '';
+      try {
+        host = remote ? new URL(endpoint).host : '';
+      } catch {}
+      const configured = remote ? Boolean(host) && plannerKey : Boolean(settings.plannerModelPath);
+      return {
+        enabled: on,
+        provider: remote ? 'remote' : 'local',
+        state: !on ? 'off' : configured ? 'ready' : 'error',
+        serverFound: !remote,
+        modelFound: !remote && Boolean(settings.plannerModelPath),
+        keySet: plannerKey,
+        host,
+        lastError: on && !configured ? 'The planner is not set up yet.' : null,
+      };
+    },
+    'planner.setKey': ({ key }: { key: string }) => {
+      plannerKey = key !== '';
+      return { ok: true };
+    },
+    'planner.suggest': async ({ goal }: { goal?: string }) => {
+      if (settings.plannerEnabled !== true) throw new Error('planner is off');
+      await new Promise((r) => setTimeout(r, 3500)); // a small model on a CPU is not instant
+      return {
+        summary: goal
+          ? `To make room for "${goal.slice(0, 60)}", cap the chat apps and protect a long block of focused time.`
+          : 'You are mostly in code and the browser today. Capping chat and entertainment and protecting one long focus block should help.',
+        suggestions: [
+          {
+            kind: 'focus',
+            minutes: 50,
+            reason:
+              'Your longest uninterrupted stretch today was 38 minutes. One 50 minute block would beat that.',
+          },
+          {
+            kind: 'limit',
+            appId: 'com.slack.Slack',
+            minutes: 45,
+            reason: 'Slack is your most-switched-to app, and about 1h 10m of today went there.',
+          },
+          {
+            kind: 'limit',
+            categoryId: categories.find((c) => c.name === 'Entertainment')?.id,
+            minutes: 45,
+            reason: 'Entertainment is over its usual share; 45 minutes keeps the evening free.',
+          },
+          {
+            kind: 'break',
+            minutes: 10,
+            reason: 'You have been active for a while without stepping away.',
+          },
+          {
+            kind: 'note',
+            reason:
+              'Most of your browsing happens right after lunch. Closing tabs before then may help.',
+          },
+        ],
+      };
+    },
+    'planner.categorize': ({ appIds }: { appIds?: string[] }) => {
+      if (settings.plannerEnabled !== true) throw new Error('planner is off');
+      const guess: Record<string, [string, number]> = {
+        'org.gnome.Evince': ['Productivity', 0.86],
+        'com.valvesoftware.Steam': ['Entertainment', 0.93],
+      };
+      const out: { appId: string; categoryId: number; confidence: number }[] = [];
+      for (const app of apps) {
+        const g = guess[app.appId];
+        if (!g || app.categoryId !== null || (appIds && !appIds.includes(app.appId))) continue;
+        const categoryId = categories.find((c) => c.name === g[0])?.id;
+        if (categoryId === undefined) continue;
+        app.categoryId = categoryId;
+        out.push({ appId: app.appId, categoryId, confidence: g[1] });
+      }
+      return out;
+    },
+    'planner.stop': () => ({ ok: true }),
     'categories.list': () => categories,
     'apps.list': () => apps,
     'apps.setCategory': ({ appId, categoryId }: { appId: string; categoryId: number | null }) => {
@@ -318,7 +444,8 @@ export function createMockBridge(): Bridge {
       web = [];
       if (everything) {
         limits = [];
-        settings = { ...DEFAULT_SETTINGS };
+        settings = { ...DEFAULT_SETTINGS, ...PLANNER_DEFAULTS };
+        plannerKey = false;
       }
       return { ok: true };
     },
