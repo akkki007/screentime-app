@@ -55,6 +55,8 @@ docs/                  architecture, ADRs, adapter guide
 
 ## Getting started
 
+Windows and macOS: the daemon (`go build ./cmd/screentimed`) builds and tracks there, but the UI, installers and notifications are Linux-only for now, and neither port has been run on real hardware yet ([ADR 13](docs/adr/0013-windows-and-macos-providers.md)). macOS needs Xcode's command line tools (cgo).
+
 Requires [Go](https://go.dev/dl/) (the version in `go.mod`) and [Bun](https://bun.sh) >= 1.1 on Linux, plus `libwebkit2gtk-4.1-dev` and `libgtk-3-dev` to build the app. Ubuntu with GNOME on Wayland is the reference setup.
 
 ```bash

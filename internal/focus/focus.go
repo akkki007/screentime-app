@@ -6,11 +6,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 )
 
 // Window is a focus change.
 type Window struct {
-	// AppID is the .desktop file ID (org.mozilla.firefox), WM_CLASS as fallback.
+	// AppID is the .desktop file ID (org.mozilla.firefox), WM_CLASS as
+	// fallback. On Windows it is the lowercased exe name (chrome), on macOS
+	// the bundle identifier (com.apple.Safari).
 	AppID string
 	// Title is only kept when the user opted in to title tracking.
 	Title string
@@ -23,7 +26,7 @@ type Window struct {
 // never synchronously inside OnFocusChange or OnIdleChange: the daemon may
 // hold its lock while subscribing.
 type Provider interface {
-	// ID is e.g. "gnome-wayland", "x11" or "none".
+	// ID is e.g. "gnome-wayland", "x11", "windows", "macos" or "none".
 	ID() string
 	// Available reports whether the adapter applies to this session.
 	Available(ctx context.Context) bool
@@ -32,7 +35,8 @@ type Provider interface {
 }
 
 // TitleCapture is implemented by providers that can leave window titles out
-// at the source when the user hasn't opted in (the GNOME extension does).
+// at the source when the user hasn't opted in (the GNOME extension and the
+// Windows provider do; macOS never reports titles).
 type TitleCapture interface {
 	SetCaptureTitles(capture bool)
 }
@@ -63,6 +67,9 @@ func Select(ctx context.Context, forced string, candidates []Provider) (Provider
 		if c.Available(ctx) {
 			return c, nil
 		}
+	}
+	if runtime.GOOS != "linux" {
+		return nil, fmt.Errorf("no focus provider available on %s", runtime.GOOS)
 	}
 	return nil, fmt.Errorf("no focus provider available for XDG_SESSION_TYPE=%s XDG_CURRENT_DESKTOP=%s",
 		os.Getenv("XDG_SESSION_TYPE"), os.Getenv("XDG_CURRENT_DESKTOP"))

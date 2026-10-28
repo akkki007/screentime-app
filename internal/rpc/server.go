@@ -1,10 +1,13 @@
-// Package rpc serves JSON-RPC 2.0 over a Unix socket, one JSON message per
-// line (docs/architecture.md#ipc-contracts).
+// Package rpc serves JSON-RPC 2.0 over a Unix socket (AF_UNIX, which Windows
+// 10 1803+ and macOS also have), one JSON message per line
+// (docs/architecture.md#ipc-contracts).
 //
 // Security requirements (docs/migration-to-go.md):
 //   - S2: the socket directory must be a real directory owned by this user,
 //     made 0700; the socket is created 0600 by the umask, with no
-//     path-based chmod; an untrusted XDG_RUNTIME_DIR is ignored.
+//     path-based chmod; an untrusted XDG_RUNTIME_DIR is ignored. Windows has
+//     no modes or umask: the directory must be owned by this user and lives
+//     under %LOCALAPPDATA%, whose ACL admits only that user (see perm_windows.go).
 //   - S7: lines over MaxLineBytes disconnect the client, and every request
 //     is validated by the handler.
 package rpc
@@ -20,7 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/akkki007/screentime-app/internal/ipc"
@@ -51,29 +53,6 @@ type Handler interface {
 	Handle(method string, params json.RawMessage) (any, error)
 }
 
-// SocketPath is $XDG_RUNTIME_DIR/screentime/daemon.sock. XDG_RUNTIME_DIR is
-// trusted only if it is a directory owned by this user with mode 0700 (as
-// GLib requires); otherwise /run/user/<uid> is used.
-func SocketPath() string {
-	base := os.Getenv("XDG_RUNTIME_DIR")
-	if base == "" || !privateTo(base, os.Getuid()) {
-		if base != "" {
-			log.Printf("[rpc] ignoring XDG_RUNTIME_DIR=%s: not a 0700 directory owned by this user", base)
-		}
-		base = fmt.Sprintf("/run/user/%d", os.Getuid())
-	}
-	return filepath.Join(base, "screentime", "daemon.sock")
-}
-
-func privateTo(dir string, uid int) bool {
-	info, err := os.Lstat(dir)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-	st, ok := info.Sys().(*syscall.Stat_t)
-	return ok && int(st.Uid) == uid && info.Mode().Perm()&0o077 == 0
-}
-
 // IsLive reports whether a daemon is already accepting connections at path.
 func IsLive(path string) bool {
 	conn, err := net.DialTimeout("unix", path, time.Second)
@@ -98,14 +77,10 @@ func prepareDir(dir string) error {
 	if !info.IsDir() {
 		return fmt.Errorf("%s is not a directory (symlink?); refusing to use it", dir)
 	}
-	if st, ok := info.Sys().(*syscall.Stat_t); !ok || int(st.Uid) != os.Getuid() {
+	if !ownedByMe(dir, info) {
 		return fmt.Errorf("%s is owned by another user; refusing to use it", dir)
 	}
-	if info.Mode().Perm()&0o077 != 0 {
-		log.Printf("[rpc] %s was mode %o; setting 0700", dir, info.Mode().Perm())
-		return os.Chmod(dir, 0o700)
-	}
-	return nil
+	return tightenDir(dir, info)
 }
 
 // removeStale deletes a leftover socket from a daemon that is gone. Anything
@@ -151,11 +126,7 @@ func Listen(path string, handler Handler) (*Server, error) {
 	if err := removeStale(path); err != nil {
 		return nil, err
 	}
-	// bind creates the socket as 0777 minus the umask: 0600 here, with no
-	// path-based chmod afterwards.
-	old := syscall.Umask(0o177)
-	ln, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
-	syscall.Umask(old)
+	ln, err := listenPrivate(path)
 	if err != nil {
 		return nil, err
 	}

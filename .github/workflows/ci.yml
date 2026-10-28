@@ -76,6 +76,30 @@ jobs:
         # Pinned as a module tool (go.mod), so go.sum locks its version.
         run: go tool govulncheck ./...
 
+  # The daemon builds and runs on Windows and macOS (ADR 13). Only the daemon:
+  # the UI shell, packaging and notifications are Linux-only for now.
+  go-portable:
+    name: Daemon on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+
+      # macOS builds with cgo (the Objective-C focus provider); Windows has none.
+      - name: Build screentimed
+        run: go build ./cmd/screentimed
+
+      - name: Test
+        run: go test ./internal/focus/ ./internal/rpc/ ./internal/store/ ./cmd/screentimed/
+
   contract-go:
     name: Contract fixtures against screentimed
     runs-on: ubuntu-latest

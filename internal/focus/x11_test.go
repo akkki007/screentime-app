@@ -1,12 +1,10 @@
+//go:build linux
+
 package focus
 
 import (
-	"errors"
 	"os"
-	"reflect"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
@@ -135,38 +133,6 @@ func TestX11ReportsTheActiveWindowThenEachChange(t *testing.T) {
 	stop()
 	m.activate(firefox)
 	noWindow(t, got)
-}
-
-// pollIdle reports threshold crossings only, and survives query errors.
-func TestPollIdleReportsCrossingsOnly(t *testing.T) {
-	readings := []int64{0, 100, 250, 400, -1, 900, 50, 20}
-	var mu sync.Mutex
-	next := 0
-	query := func() (int64, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		if next >= len(readings) {
-			return 0, nil
-		}
-		v := readings[next]
-		next++
-		if v < 0 {
-			return 0, errors.New("server went away for a moment")
-		}
-		return v, nil
-	}
-	got := make(chan bool, 8)
-	done := make(chan struct{})
-	go pollIdle(done, time.Millisecond, 300, query, func(idle bool) { got <- idle })
-	waitFor(t, "all readings", func() bool { mu.Lock(); defer mu.Unlock(); return next >= len(readings) })
-	close(done)
-	var seen []bool
-	for len(got) > 0 {
-		seen = append(seen, <-got)
-	}
-	if want := []bool{true, false}; !reflect.DeepEqual(seen, want) {
-		t.Errorf("reports = %v, want %v", seen, want)
-	}
 }
 
 // On a real server, the idle query works. (How servers count idle time

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,14 +20,36 @@ import (
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 )
 
-// DefaultPath is $XDG_DATA_HOME/screentime/screentime.db, falling back to
-// ~/.local/share like the Bun daemon (packages/shared/src/config.ts).
+// DefaultPath is where the database lives on this OS (dataPath).
 func DefaultPath() string {
-	base := os.Getenv("XDG_DATA_HOME")
-	if base == "" {
-		base = filepath.Join(os.Getenv("HOME"), ".local", "share")
+	home, _ := os.UserHomeDir()
+	return dataPath(runtime.GOOS, os.Getenv, home)
+}
+
+// dataPath is $XDG_DATA_HOME/screentime/screentime.db on Linux and the other
+// Unixes, falling back to ~/.local/share like the Bun daemon
+// (packages/shared/src/config.ts); ~/Library/Application Support/screentime
+// on macOS; %LOCALAPPDATA%\screentime on Windows. Per-user and not roamed on
+// both, and the directory is made private by Open.
+func dataPath(goos string, getenv func(string) string, home string) string {
+	var dir string
+	switch goos {
+	case "darwin":
+		dir = filepath.Join(home, "Library", "Application Support", "screentime")
+	case "windows":
+		base := getenv("LOCALAPPDATA")
+		if base == "" {
+			base = filepath.Join(home, "AppData", "Local")
+		}
+		dir = filepath.Join(base, "screentime")
+	default:
+		base := getenv("XDG_DATA_HOME")
+		if base == "" {
+			base = filepath.Join(getenv("HOME"), ".local", "share")
+		}
+		dir = filepath.Join(base, "screentime")
 	}
-	return filepath.Join(base, "screentime", "screentime.db")
+	return filepath.Join(dir, "screentime.db")
 }
 
 // Open opens (creating if needed) the database at path in WAL mode, with
