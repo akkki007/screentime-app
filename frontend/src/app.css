@@ -134,15 +134,6 @@ body {
   border: 2px solid var(--bg);
 }
 
-/* uPlot: let tooltips and axes inherit the theme. */
-.uplot,
-.uplot * {
-  font-family: var(--font-sans);
-}
-.u-legend {
-  display: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
