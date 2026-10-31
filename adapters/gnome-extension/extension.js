@@ -17,6 +17,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Notch } from './notchUI.js';
 
 const APP_ID = 'io.github.akkki007.screentime';
 const FOCUS_INTERFACE_NAME = `${APP_ID}.Focus`;
@@ -61,6 +62,9 @@ export default class ScreentimeFocusExtension extends Extension {
     );
 
     this._tracker = Shell.WindowTracker.get_default();
+    // The notch at the top of the screen (ADR 14); it follows the notchEnabled setting.
+    this._notch = new Notch();
+    this._notch.enable();
     this._focusHandlerId = global.display.connect('notify::focus-window', () => {
       this._emitFocusChanged();
     });
@@ -69,6 +73,8 @@ export default class ScreentimeFocusExtension extends Extension {
   }
 
   disable() {
+    this._notch?.disable();
+    this._notch = null;
     if (this._focusHandlerId) {
       global.display.disconnect(this._focusHandlerId);
       this._focusHandlerId = null;
