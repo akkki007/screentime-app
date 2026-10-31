@@ -25,13 +25,37 @@ export type Bridge = {
 /** Go's fully qualified name for the bound service (internal/shell.Bridge). */
 const BRIDGE = 'github.com/akkki007/screentime-app/internal/shell.Bridge';
 
-/** Wails injects its environment before the page's scripts run. */
-function insideApp(): boolean {
-  return Boolean((window as { _wails?: { environment?: unknown } })._wails?.environment);
+type HostWindow = {
+  _wails?: { environment?: unknown };
+  webkit?: { messageHandlers?: { external?: unknown } };
+  chrome?: { webview?: unknown };
+};
+
+/**
+ * Whether this page runs inside the app's webview. Wails sets
+ * `_wails.environment`, but on Linux (WebKitGTK) only once the page has
+ * finished loading, which is after this module first runs, so checking it
+ * once raced and a window sometimes showed "couldn't start". The webview's
+ * message channel (WebKit's `external` handler, or WebView2's
+ * `chrome.webview`) exists from the start, so when it is there we wait for
+ * the environment instead. A plain browser has neither and answers at once.
+ */
+export async function waitForApp(
+  win: HostWindow,
+  { timeoutMs = 5000, intervalMs = 10 } = {},
+): Promise<boolean> {
+  if (win._wails?.environment) return true;
+  if (!win.webkit?.messageHandlers?.external && !win.chrome?.webview) return false;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    if (win._wails?.environment) return true;
+  }
+  return false;
 }
 
 export async function createBridge(): Promise<Bridge> {
-  if (!insideApp()) {
+  if (!(await waitForApp(window as HostWindow))) {
     // The in-memory mock is for browser previews only. This branch is removed
     // from production builds, so the mock never ships inside the app.
     if (!import.meta.env.DEV) throw new Error('Screentime must run inside its desktop app.');
