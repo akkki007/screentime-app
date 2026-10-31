@@ -71,15 +71,14 @@ function move(e: MouseEvent) {
 			onmouseleave={() => (hover = -1)}
 		>
 			{#each ticks as t}
-				<line x1={LEFT} x2={LEFT + plotW} y1={y(t)} y2={y(t)} stroke="var(--line)" />
+				<line x1={LEFT} x2={LEFT + plotW} y1={y(t)} y2={y(t)} stroke="var(--line)" stroke-dasharray={t === 0 ? undefined : "3 4"} />
 				<text x={LEFT - 6} y={y(t)} text-anchor="end" dominant-baseline="middle" fill="var(--muted)">{formatShort(t)}</text>
 			{/each}
 			{#each values as v, i}
 				{#if v > 0}
 					<path
 						d={bar(cx(i) - barW / 2, y(v), barW, y(0) - y(v))}
-						fill="var(--accent)"
-						fill-opacity={i === highlight ? 1 : 0.6}
+						fill={i === highlight ? "var(--accent)" : hover === i ? "var(--bar-hover)" : "var(--bar)"}
 					/>
 				{/if}
 			{/each}
@@ -91,13 +90,13 @@ function move(e: MouseEvent) {
 		</svg>
 		{#if hover >= 0}
 			<div
-				class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-ink px-2 py-1 text-[11px] whitespace-nowrap text-bg shadow"
+				class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-line bg-surface-raised px-2.5 py-1.5 text-xs whitespace-nowrap shadow-[var(--shadow-pop)]"
 				style="left: {cx(hover)}px; top: {y(values[hover] as number) - 4}px"
 			>
-				{labels[hover]} · {formatDuration(values[hover] as number)}
+				<span class="text-muted">{labels[hover]}</span> <span class="font-medium tabular-nums">{formatDuration(values[hover] as number)}</span>
 			</div>
 		{/if}
 	</div>
 {:else}
-	<div class="grid place-items-center text-sm text-muted" style="height: {height}px">{empty}</div>
+	<div class="grid place-items-center text-[13px] text-muted" style="height: {height}px">{empty}</div>
 {/if}

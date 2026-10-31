@@ -2,6 +2,7 @@
 import type { Settings } from '@screentime/shared';
 import Button from '../components/Button.svelte';
 import Card from '../components/Card.svelte';
+import DetailRow from '../components/DetailRow.svelte';
 import Icon from '../components/Icon.svelte';
 import Modal from '../components/Modal.svelte';
 import PlannerSlot from '../components/PlannerSlot.svelte';
@@ -41,15 +42,15 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 
 <div class="flex flex-col gap-5">
 	<header>
-		<h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
-		<p class="text-sm text-muted">Everything stays on this computer.</p>
+		<h1 class="text-2xl font-medium tracking-tight">Settings</h1>
+		<p class="mt-1 text-[13px] text-muted">Everything stays on this computer.</p>
 	</header>
 
 	{#if settings}
 		<Card title="Tracking">
 			<SettingRow title="Count me as away after" description="With no keyboard or mouse input for this long, the current session ends. The idle time itself is never counted.">
 				<select
-					class="rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-[13px]"
+					class="field"
 					aria-label="Idle threshold"
 					value={settings.idleThresholdMinutes}
 					onchange={(e) => save({ idleThresholdMinutes: Number(e.currentTarget.value) })}
@@ -69,8 +70,8 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 			>
 				<Toggle label="Record window titles" checked={settings.captureTitles} onchange={(v) => save({ captureTitles: v })} />
 			</SettingRow>
-			<div class="mt-4 flex items-start gap-3 rounded-xl bg-accent-soft p-3 text-[13px]">
-				<span class="mt-0.5 text-accent"><Icon name="shield" size={16} /></span>
+			<div class="mt-4 flex items-start gap-3 rounded-xl border border-line bg-surface-2/70 p-3 text-[13px] text-muted">
+				<span class="mt-0.5 text-good"><Icon name="shield" size={16} /></span>
 				<p>
 					Screentime never connects to the internet unless you turn on the optional planner with your own API key. Your data lives in <code class="rounded bg-surface px-1">~/.local/share/screentime</code> and
 					is only ever read by this app.
@@ -109,14 +110,12 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 	</Card>
 
 	<Card title="About">
-		<dl class="grid grid-cols-[9rem_1fr] gap-y-2 text-[13px]">
-			<dt class="text-muted">Daemon</dt>
-			<dd class={store.connected ? "text-good" : "text-bad"}>{store.connected ? "Connected" : "Not running"}</dd>
-			<dt class="text-muted">Data source</dt>
-			<dd>{store.mode === "mock" ? "Demo data (browser preview)" : "Local tracker daemon"}</dd>
-			<dt class="text-muted">License</dt>
-			<dd>GPL-3.0-or-later</dd>
-		</dl>
+		<DetailRow label="Daemon" dashed>
+			<span class="size-2 rounded-full {store.connected ? 'bg-good' : 'bg-bad'}"></span>
+			{store.connected ? "Connected" : "Not running"}
+		</DetailRow>
+		<DetailRow label="Data source" dashed>{store.mode === "mock" ? "Demo data (browser preview)" : "Local tracker daemon"}</DetailRow>
+		<DetailRow label="License" dashed>GPL-3.0-or-later</DetailRow>
 	</Card>
 </div>
 
@@ -132,12 +131,12 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 		{#if confirm === "everything"}
 			<label class="mt-4 flex flex-col gap-1.5 text-[13px] font-medium">
 				Type RESET to confirm
-				<input class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" bind:value={typed} autocomplete="off" />
+				<input class="field font-normal" bind:value={typed} autocomplete="off" />
 			</label>
 		{/if}
 		{#snippet footer()}
 			<Button onclick={() => ((confirm = undefined), (typed = ""))}>Cancel</Button>
-			<Button variant="danger" disabled={confirm === "everything" && typed !== "RESET"} onclick={wipe}>
+			<Button variant="destructive" disabled={confirm === "everything" && typed !== "RESET"} onclick={wipe}>
 				{confirm === "everything" ? "Reset everything" : "Delete history"}
 			</Button>
 		{/snippet}

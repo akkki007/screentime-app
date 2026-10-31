@@ -81,13 +81,13 @@ const slices = $derived(
 <div class="flex flex-col gap-5">
 	<header class="flex items-end justify-between gap-4">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Trends</h1>
-			<p class="text-sm text-muted">{dayMonth(perDay[0]?.key ?? "2000-01-01")} – {dayMonth(perDay.at(-1)?.key ?? "2000-01-01")}</p>
+			<h1 class="text-2xl font-medium tracking-tight">Trends</h1>
+			<p class="mt-1 text-[13px] text-muted">{dayMonth(perDay[0]?.key ?? "2000-01-01")} – {dayMonth(perDay.at(-1)?.key ?? "2000-01-01")}</p>
 		</div>
-		<div class="inline-flex rounded-lg border border-line bg-surface p-0.5" role="group" aria-label="Range">
+		<div class="inline-flex rounded-[10px] border border-line bg-surface-2 p-0.5" role="group" aria-label="Range">
 			{#each RANGES as r}
 				<button
-					class="rounded-md px-3 py-1 text-[13px] font-medium transition {days === r ? 'bg-accent text-white' : 'text-muted hover:text-ink'}"
+					class="rounded-lg px-3 py-1 text-[13px] transition {days === r ? 'bg-surface font-medium text-ink shadow-[var(--shadow)]' : 'text-muted hover:text-ink'}"
 					aria-pressed={days === r}
 					onclick={() => (days = r)}
 				>
@@ -98,7 +98,7 @@ const slices = $derived(
 	</header>
 
 	{#if loadError}
-		<p class="rounded-xl border border-bad/40 bg-bad/10 p-3 text-sm text-bad" role="alert">{loadError}</p>
+		<p class="rounded-xl border border-bad/30 bg-bad/5 p-3 text-[13px] text-bad" role="alert">{loadError}</p>
 	{/if}
 
 	<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -121,12 +121,12 @@ const slices = $derived(
 		<Card title="By category" class="lg:col-span-2">
 			<div class="flex items-center gap-4">
 				<Donut items={slices} centerTitle={formatShort(total)} centerSub={`${days} days`} size={150} />
-				<ul class="flex min-w-0 flex-1 flex-col gap-2 text-[13px]">
+				<ul class="flex min-w-0 flex-1 flex-col text-[13px]">
 					{#each slices.slice(0, 6) as s (s.name)}
-						<li class="flex items-center gap-2">
-							<span class="size-2.5 shrink-0 rounded-full" style="background: {s.color}"></span>
+						<li class="flex items-center gap-2.5 py-1.5">
+							<span class="size-2 shrink-0 rounded-full" style="background: {s.color}"></span>
 							<span class="flex-1 truncate">{s.name}</span>
-							<span class="text-xs text-muted tabular-nums">{percent(s.value, total)}%</span>
+							<span class="text-muted tabular-nums">{percent(s.value, total)}%</span>
 						</li>
 					{/each}
 				</ul>

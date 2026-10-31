@@ -151,7 +151,7 @@ const rows = $derived(
 				<label for="plan-goal" class="text-[13px] font-medium">What would you like from today? <span class="font-normal text-muted">(optional)</span></label>
 				<textarea
 					id="plan-goal"
-					class="min-h-[4.5rem] w-full resize-y rounded-lg border border-line bg-surface-2 px-3 py-2 text-[13px] placeholder:text-muted"
+					class="min-h-[4.5rem] w-full resize-y field"
 					rows="2"
 					maxlength={LIMITS.goal}
 					placeholder="e.g. Finish the report by 4pm and spend less time in chat"

@@ -143,8 +143,7 @@ const STATE_TEXT = {
   error: 'Error',
 } as const;
 
-const input =
-  'w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-[13px] placeholder:text-muted aria-[invalid=true]:border-bad';
+const input = 'w-full field aria-[invalid=true]:border-bad';
 </script>
 
 {#snippet dot(ok: boolean)}
@@ -154,10 +153,10 @@ const input =
 <div class="mt-4 flex flex-col gap-5 border-t border-line pt-5">
 	<fieldset class="flex flex-col gap-2" disabled={!store.connected || saving}>
 		<legend class="mb-1.5 text-[13px] font-medium">Where the model runs</legend>
-		<div class="inline-flex w-fit max-w-full flex-wrap gap-1 rounded-full border border-line bg-surface-2 p-1">
+		<div class="inline-flex w-fit max-w-full flex-wrap gap-0.5 rounded-[10px] border border-line bg-surface-2 p-0.5">
 			{#each [{ id: "local", label: "Local model" }, { id: "remote", label: "Your own API key" }] as opt (opt.id)}
 				<label
-					class="cursor-pointer rounded-full px-4 py-1.5 text-[13px] font-medium transition has-[:checked]:bg-dark has-[:checked]:text-on-dark has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+					class="cursor-pointer rounded-lg px-3.5 py-1 text-[13px] text-muted transition has-[:checked]:bg-surface has-[:checked]:font-medium has-[:checked]:text-ink has-[:checked]:shadow-[var(--shadow)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
 				>
 					<input
 						type="radio"
@@ -218,7 +217,7 @@ const input =
 						min={LIMITS.idleMin}
 						max={LIMITS.idleMax}
 						step="1"
-						class="w-16 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-right aria-[invalid=true]:border-bad"
+						class="w-16 field text-right aria-[invalid=true]:border-bad"
 						aria-label="Minutes idle before the local model stops"
 						aria-invalid={errors.idle ? "true" : "false"}
 						bind:value={idle}

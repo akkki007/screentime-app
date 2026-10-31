@@ -1,18 +1,12 @@
 <script lang="ts">
 import { store } from '../lib/store.svelte';
 import Icon from './Icon.svelte';
-
-const tone = {
-  info: 'border-accent/40',
-  success: 'border-good/50',
-  error: 'border-bad/60',
-};
 </script>
 
 <div class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 flex-col gap-2" aria-live="polite">
 	{#each store.toasts as toast (toast.id)}
 		<div
-			class="pointer-events-auto flex items-start gap-2 rounded-xl border bg-surface p-3 text-[13px] shadow-lg {tone[toast.kind]}"
+			class="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-line bg-surface-raised p-3 text-[13px] shadow-[var(--shadow-pop)]"
 			role={toast.kind === "error" ? "alert" : "status"}
 		>
 			<span class="mt-0.5 shrink-0 {toast.kind === 'error' ? 'text-bad' : toast.kind === 'success' ? 'text-good' : 'text-accent'}">

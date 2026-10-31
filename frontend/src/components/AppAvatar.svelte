@@ -8,9 +8,11 @@ const label = $derived(appLabel(appId, store.appName(appId)));
 const color = $derived(store.categoryOf(appId)?.color ?? '#64748b');
 </script>
 
+<!-- A soft tile in the app's category colour, with its initial. -->
 <span
-	class="grid shrink-0 place-items-center rounded-lg font-semibold text-white"
-	style="width: {size}px; height: {size}px; background: {color}; font-size: {size * 0.42}px"
+	class="grid shrink-0 place-items-center font-semibold"
+	style="width: {size}px; height: {size}px; border-radius: {Math.round(size * 0.28)}px; color: {color};
+		background: color-mix(in srgb, {color} 14%, var(--surface)); font-size: {Math.round(size * 0.42)}px"
 	aria-hidden="true"
 >
 	{label.charAt(0).toUpperCase()}

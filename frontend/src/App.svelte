@@ -21,10 +21,7 @@ function onKey(e: KeyboardEvent) {
   if (widget && e.key === 'Escape') void getBridge().closeWindow();
 }
 const widget = location.hash === '#widget';
-if (widget) {
-  document.documentElement.dataset.view = 'widget';
-  document.documentElement.dataset.theme = 'dark';
-}
+if (widget) document.documentElement.dataset.view = 'widget';
 
 (async () => {
   try {
@@ -84,7 +81,7 @@ const needsOnboarding = $derived(
 {:else}
 	<div class="flex h-full flex-col">
 		<TopNav />
-		<main class="min-h-0 flex-1 overflow-y-auto">
+		<main class="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable_both-edges]">
 			{#if !store.connected}
 				<div class="m-6 mb-0 flex items-start gap-3 rounded-xl border border-warn/40 bg-warn/10 p-4 text-[13px]" role="alert">
 					<span class="mt-0.5 text-warn">!</span>

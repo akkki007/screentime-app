@@ -3,6 +3,7 @@ import type { Limit } from '@screentime/shared';
 import AppAvatar from '../components/AppAvatar.svelte';
 import Button from '../components/Button.svelte';
 import Card from '../components/Card.svelte';
+import DetailRow from '../components/DetailRow.svelte';
 import Icon from '../components/Icon.svelte';
 import Modal from '../components/Modal.svelte';
 import { daemon } from '../lib/api';
@@ -174,10 +175,10 @@ async function remove() {
 </script>
 
 <div class="flex flex-col gap-5">
-	<header class="flex items-end justify-between gap-4">
+	<header class="flex items-center justify-between gap-4">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Limits</h1>
-			<p class="text-sm text-muted">Daily limits for an app, a category or a website. They nudge you; they don't lock anything.</p>
+			<h1 class="text-2xl font-medium tracking-tight">Limits</h1>
+			<p class="mt-1 text-[13px] text-muted">Daily limits for an app, a category or a website. They nudge you; they don't lock anything.</p>
 		</div>
 		<Button variant="primary" onclick={() => ((draft = newDraft()), (formError = undefined))}>
 			<Icon name="plus" size={14} /> New limit
@@ -187,8 +188,8 @@ async function remove() {
 	{#if store.limits.length === 0}
 		<Card>
 			<div class="py-10 text-center">
-				<p class="font-medium">No limits yet</p>
-				<p class="mx-auto mt-1 max-w-sm text-sm text-muted">
+				<p class="text-[15px] font-medium">No limits yet</p>
+				<p class="mx-auto mt-1 max-w-sm text-[13px] text-muted">
 					Set one for the app or site you lose the most time to. You'll get a notification when you hit it.
 				</p>
 			</div>
@@ -201,29 +202,32 @@ async function remove() {
 				<Card>
 					<div class="flex items-start gap-3">
 						{#if limit.targetType === "app"}
-							<AppAvatar appId={limit.target} size={36} />
+							<AppAvatar appId={limit.target} size={40} />
 						{:else}
-							<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
-								<Icon name={limit.targetType === "category" || limit.targetType === "total" ? "apps" : "globe"} size={16} />
+							<span class="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-muted">
+								<Icon name={limit.targetType === "category" || limit.targetType === "total" ? "apps" : "globe"} size={18} />
 							</span>
 						{/if}
 						<div class="min-w-0 flex-1">
-							<p class="truncate font-medium">{targetLabel(limit)}</p>
-							<p class="text-xs text-muted">
-								<span class="capitalize">{limit.targetType === "total" ? "everything" : limit.targetType}</span> · {ACTIONS[limit.action]}{limit.schedule ? ` · ${limit.schedule.replace("-", "–")}` : ""}
-							</p>
+							<p class="truncate text-[15px] font-medium">{targetLabel(limit)}</p>
+							<p class="mt-0.5 text-[13px] text-muted capitalize">{limit.targetType === "total" ? "everything" : limit.targetType === "domain" ? "website" : limit.targetType}</p>
 						</div>
-						<Button variant="ghost" title="Edit limit" onclick={() => edit(limit)}><Icon name="edit" size={15} /></Button>
-						<Button variant="ghost" title="Delete limit" onclick={() => (confirmDelete = limit)}><Icon name="trash" size={15} /></Button>
+						<Button size="sm" onclick={() => edit(limit)}>Edit</Button>
+						<Button size="icon" variant="ghost" title="Delete limit" onclick={() => (confirmDelete = limit)}><Icon name="trash" size={16} /></Button>
 					</div>
 					<div class="mt-4">
-						<div class="mb-1.5 flex items-baseline justify-between text-xs">
-							<span class="font-medium tabular-nums">{formatDuration(used)} <span class="font-normal text-muted">of {formatDuration(limit.dailyMs)}</span></span>
-							<span class="tabular-nums {pct >= 100 ? 'text-bad' : 'text-muted'}">{pct}%</span>
-						</div>
-						<div class="h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.min(pct, 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Used today">
+						<DetailRow label="Used today" dashed>
+							{formatDuration(used)}
+							<span class="font-normal text-muted">of {formatDuration(limit.dailyMs)}</span>
+						</DetailRow>
+						<DetailRow label="When reached" dashed>{ACTIONS[limit.action]}</DetailRow>
+						<DetailRow label="Schedule" dashed>{limit.schedule ? limit.schedule.replace("-", "–") : "All day"}</DetailRow>
+					</div>
+					<div class="mt-3 flex items-center gap-3">
+						<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.min(pct, 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Used today">
 							<div class="h-full rounded-full transition-all {pct >= 100 ? 'bg-bad' : pct >= 80 ? 'bg-warn' : 'bg-accent'}" style="width: {Math.min(pct, 100)}%"></div>
 						</div>
+						<span class="w-11 text-right text-xs tabular-nums {pct >= 100 ? 'text-bad' : 'text-muted'}">{pct}%</span>
 					</div>
 				</Card>
 			{/each}
@@ -243,7 +247,7 @@ async function remove() {
 		>
 			<label class="flex flex-col gap-1.5 text-[13px] font-medium">
 				Limit a
-				<select class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" value={d.targetType} onchange={(e) => changeType(e.currentTarget.value as Limit["targetType"])}>
+				<select class="field font-normal" value={d.targetType} onchange={(e) => changeType(e.currentTarget.value as Limit["targetType"])}>
 					<option value="app">App</option>
 					<option value="category">Category</option>
 					<option value="domain">Website</option>
@@ -254,28 +258,28 @@ async function remove() {
 			<label class="flex flex-col gap-1.5 text-[13px] font-medium">
 				{d.targetType === "total" ? "Applies to" : d.targetType === "app" ? "App" : d.targetType === "category" ? "Category" : "Website"}
 				{#if d.targetType === "total"}
-					<span class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal text-muted">Everything you use, together</span>
+					<span class="field font-normal text-muted">Everything you use, together</span>
 				{:else if d.targetType === "app"}
-					<select class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" bind:value={d.target}>
+					<select class="field font-normal" bind:value={d.target}>
 						{#each store.apps as a (a.appId)}<option value={a.appId}>{appLabel(a.appId, a.name)}</option>{/each}
 					</select>
 				{:else if d.targetType === "category"}
-					<select class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" bind:value={d.target}>
+					<select class="field font-normal" bind:value={d.target}>
 						{#each store.categories as c (c.id)}<option value={c.name}>{c.name}</option>{/each}
 					</select>
 				{:else}
-					<input class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" placeholder="youtube.com" bind:value={d.target} />
+					<input class="field font-normal" placeholder="youtube.com" bind:value={d.target} />
 				{/if}
 			</label>
 
 			<div class="grid grid-cols-2 gap-3">
 				<label class="flex flex-col gap-1.5 text-[13px] font-medium">
 					Per day
-					<input class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" placeholder="1h 30m" bind:value={d.duration} />
+					<input class="field font-normal" placeholder="1h 30m" bind:value={d.duration} />
 				</label>
 				<label class="flex flex-col gap-1.5 text-[13px] font-medium">
 					When reached
-					<select class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" bind:value={d.action}>
+					<select class="field font-normal" bind:value={d.action}>
 						{#each Object.entries(ACTIONS) as [value, label]}<option {value}>{label}</option>{/each}
 					</select>
 				</label>
@@ -288,9 +292,9 @@ async function remove() {
 				</label>
 				{#if d.scheduled}
 					<div class="flex items-center gap-2">
-						<input type="time" class="rounded-lg border border-line bg-surface-2 px-3 py-1.5" aria-label="From" bind:value={d.from} />
+						<input type="time" class="field" aria-label="From" bind:value={d.from} />
 						<span class="text-muted">to</span>
-						<input type="time" class="rounded-lg border border-line bg-surface-2 px-3 py-1.5" aria-label="To" bind:value={d.to} />
+						<input type="time" class="field" aria-label="To" bind:value={d.to} />
 					</div>
 				{/if}
 			</div>
@@ -310,7 +314,7 @@ async function remove() {
 		<p class="text-[13px] text-muted">The limit for <b class="text-ink">{targetLabel(confirmDelete)}</b> will stop applying. Your usage history is not affected.</p>
 		{#snippet footer()}
 			<Button onclick={() => (confirmDelete = undefined)}>Cancel</Button>
-			<Button variant="danger" onclick={remove}>Delete</Button>
+			<Button variant="destructive" onclick={remove}>Delete</Button>
 		{/snippet}
 	</Modal>
 {/if}

@@ -25,13 +25,13 @@ const blocks = $derived(
 </script>
 
 <div>
-	<div class="relative h-9 overflow-hidden rounded-lg bg-surface-2">
+	<div class="relative h-10 overflow-hidden rounded-[10px] border border-line bg-surface-2/60">
 		{#each hours as h}
-			<div class="absolute top-0 h-full w-px bg-line" style="left: {(h / 24) * 100}%"></div>
+			<div class="absolute top-0 h-full border-l border-dashed border-line-dashed" style="left: {(h / 24) * 100}%"></div>
 		{/each}
 		{#each blocks as b (b.id)}
 			<div
-				class="absolute top-1.5 h-6 rounded-[3px] transition-opacity hover:opacity-80"
+				class="absolute top-2 h-6 rounded-[4px] transition-opacity hover:opacity-75"
 				style="left: {b.left}%; width: {b.width}%; background: {b.color}"
 				title={b.label}
 			></div>
