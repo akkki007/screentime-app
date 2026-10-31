@@ -1218,6 +1218,99 @@
       ],
       "additionalProperties": true
     },
+    "event.settings": {
+      "type": "object",
+      "properties": {
+        "captureTitles": {
+          "type": "boolean",
+          "default": false
+        },
+        "idleThresholdMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 3
+        },
+        "breakRemindersEnabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "breakEveryMinutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 240,
+          "default": 50
+        },
+        "breakLengthMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        },
+        "downtimeEnabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "downtimeStart": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "default": "22:00"
+        },
+        "downtimeEnd": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "default": "07:00"
+        },
+        "onboardingDone": {
+          "type": "boolean",
+          "default": false
+        },
+        "notchEnabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "plannerEnabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "plannerProvider": {
+          "type": "string",
+          "enum": [
+            "local",
+            "remote"
+          ],
+          "default": "local"
+        },
+        "plannerEndpoint": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^(https?:\\/\\/[^\\s]+)?$",
+          "default": ""
+        },
+        "plannerModel": {
+          "type": "string",
+          "maxLength": 100,
+          "default": ""
+        },
+        "plannerServerPath": {
+          "type": "string",
+          "maxLength": 300,
+          "default": ""
+        },
+        "plannerModelPath": {
+          "type": "string",
+          "maxLength": 300,
+          "default": ""
+        },
+        "plannerIdleMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5
+        }
+      },
+      "additionalProperties": true
+    },
     "event.status": {
       "type": "object",
       "properties": {

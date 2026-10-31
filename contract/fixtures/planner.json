@@ -289,6 +289,29 @@
       "receive": [
         {
           "jsonrpc": "2.0",
+          "method": "event.settings",
+          "params": {
+            "captureTitles": false,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true,
+            "notchEnabled": true,
+            "plannerEnabled": false,
+            "plannerProvider": "remote",
+            "plannerEndpoint": "https://api.example.com/v1",
+            "plannerModel": "m",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
+          }
+        },
+        {
+          "jsonrpc": "2.0",
           "id": 15,
           "result": {
             "captureTitles": false,

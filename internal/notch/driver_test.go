@@ -27,6 +27,8 @@ func (f *fakeDaemon) Handle(method string, params json.RawMessage) (any, error) 
 	switch method {
 	case "tracker.status":
 		return f.status, nil
+	case "settings.get":
+		return map[string]any{"notchEnabled": true}, nil
 	case "apps.list":
 		name := "Brave"
 		return []map[string]any{{"appId": "brave_brave", "name": &name}}, nil
@@ -97,6 +99,11 @@ func TestDriverFollowsTheDaemon(t *testing.T) {
 	if got != `focus.stop ; tracker.pause {"minutes":15}` {
 		t.Errorf("actions = %s", got)
 	}
+
+	srv.Broadcast("event.settings", map[string]any{"notchEnabled": false})
+	eventually(t, "the notch to follow the setting", func() bool { return !d.Enabled() })
+	srv.Broadcast("event.settings", map[string]any{"notchEnabled": true})
+	eventually(t, "the notch to come back", func() bool { return d.Enabled() })
 
 	srv.Broadcast("event.reminder", ipc.ReminderEvent{Kind: "break", Message: "Time for a break."})
 	eventually(t, "the reminder", func() bool { return d.View().Kind == "reminder" })

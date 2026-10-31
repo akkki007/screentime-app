@@ -287,6 +287,8 @@ func (d *Daemon) handle(method string, params json.RawMessage) (any, error) {
 		d.configureTracker()
 		d.syncPlanner()
 		d.syncNetwork()
+		// Every client follows the settings: the notch shows or hides itself.
+		d.hub.Broadcast("event.settings", s)
 		return s, nil
 
 	case "tracker.pause":

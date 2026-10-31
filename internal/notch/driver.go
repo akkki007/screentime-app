@@ -24,12 +24,13 @@ type Driver struct {
 
 	conn *shell.Conn
 
-	mu     sync.Mutex
-	model  *Model
-	limits map[int64]ipc.Limit
-	names  map[string]string
-	redraw *time.Timer
-	minute *time.Timer
+	mu      sync.Mutex
+	model   *Model
+	enabled bool
+	limits  map[int64]ipc.Limit
+	names   map[string]string
+	redraw  *time.Timer
+	minute  *time.Timer
 }
 
 // todayEvery refreshes today's total while connected; the pill shows minutes.
@@ -38,7 +39,7 @@ const todayEvery = time.Minute
 // NewDriver returns a driver for the daemon at the default socket. Pass
 // conn options only in tests.
 func NewDriver(onChange func(), opts ...shell.Options) *Driver {
-	d := &Driver{OnChange: onChange, Now: time.Now, names: map[string]string{}, limits: map[int64]ipc.Limit{}}
+	d := &Driver{OnChange: onChange, Now: time.Now, names: map[string]string{}, limits: map[int64]ipc.Limit{}, enabled: true}
 	d.model = New(Options{UserName: realName()})
 	o := shell.Options{}
 	if len(opts) > 0 {
@@ -63,6 +64,14 @@ func (d *Driver) Stop() {
 		}
 	}
 	d.mu.Unlock()
+}
+
+// Enabled is the user's notchEnabled setting: when false the notch hides.
+// It stays true while the daemon is unreachable, so "not running" can show.
+func (d *Driver) Enabled() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.enabled
 }
 
 // View is what the pill shows now.
@@ -119,6 +128,9 @@ func (d *Driver) onState(s shell.State) {
 
 // resync loads everything a fresh connection needs.
 func (d *Driver) resync() {
+	if raw, err := d.conn.Call("settings.get", nil); err == nil {
+		d.setSettings(raw)
+	}
 	if raw, err := d.conn.Call("tracker.status", nil); err == nil {
 		var st ipc.TrackerStatus
 		if json.Unmarshal(raw, &st) == nil {
@@ -147,6 +159,8 @@ func (d *Driver) onNotification(method string, params json.RawMessage) {
 		go d.refreshToday()
 	case "event.focus":
 		go d.refreshToday()
+	case "event.settings":
+		d.setSettings(params)
 	case "event.limitHit":
 		var e ipc.LimitHitEvent
 		if json.Unmarshal(params, &e) != nil {
@@ -166,6 +180,18 @@ func (d *Driver) onNotification(method string, params json.RawMessage) {
 		return
 	}
 	d.changed()
+}
+
+func (d *Driver) setSettings(raw json.RawMessage) {
+	var s struct {
+		NotchEnabled *bool `json:"notchEnabled"`
+	}
+	if json.Unmarshal(raw, &s) != nil || s.NotchEnabled == nil {
+		return
+	}
+	d.mu.Lock()
+	d.enabled = *s.NotchEnabled
+	d.mu.Unlock()
 }
 
 func (d *Driver) limitHit(id int64) {

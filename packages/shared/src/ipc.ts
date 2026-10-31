@@ -311,6 +311,8 @@ export const RpcNotifications = {
   'event.focus': FocusEventSchema,
   'event.limitHit': LimitHitEventSchema,
   'event.reminder': ReminderEventSchema,
+  /** The settings after a change, so every client (the notch, the tray) can follow them. */
+  'event.settings': SettingsSchema,
   'event.status': TrackerStatusSchema,
 } as const;
 
