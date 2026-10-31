@@ -75,3 +75,32 @@ func tightenDir(string, os.FileInfo) error { return nil }
 func listenPrivate(path string) (*net.UnixListener, error) {
 	return net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
 }
+
+// ownerDetail names the SIDs involved, for an ownership error: the owner of
+// path, the current user and the token's default owner. They are local
+// account identifiers, not secrets, and they are what is needed to see why a
+// directory the user just created was refused.
+func ownerDetail(path string) string {
+	sd, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return " (owner unknown: " + err.Error() + ")"
+	}
+	owner, _, _ := sd.Owner()
+	token := windows.GetCurrentProcessToken()
+	user, userErr := token.GetTokenUser()
+	def, defErr := defaultOwner(token)
+	str := func(s *windows.SID) string {
+		if s == nil {
+			return "none"
+		}
+		return s.String()
+	}
+	var u *windows.SID
+	if userErr == nil {
+		u = user.User.Sid
+	}
+	if defErr != nil {
+		def = nil
+	}
+	return " (owner " + str(owner) + ", you " + str(u) + ", default owner " + str(def) + ")"
+}

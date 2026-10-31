@@ -87,7 +87,7 @@ func prepareDir(dir string) error {
 		return fmt.Errorf("%s is not a directory (symlink?); refusing to use it", dir)
 	}
 	if !ownedByMe(dir, info) {
-		return fmt.Errorf("%s is owned by another user; refusing to use it", dir)
+		return fmt.Errorf("%s is owned by another user%s; refusing to use it", dir, ownerDetail(dir))
 	}
 	return tightenDir(dir, info)
 }

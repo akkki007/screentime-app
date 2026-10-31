@@ -28,3 +28,7 @@ func listenPrivate(path string) (*net.UnixListener, error) {
 	defer syscall.Umask(old)
 	return net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
 }
+
+// ownerDetail is extra text for an ownership error; Unix has nothing to add
+// beyond the message.
+func ownerDetail(string) string { return "" }
