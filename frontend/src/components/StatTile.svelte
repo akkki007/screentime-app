@@ -32,6 +32,6 @@ const hintTone = $derived(
 
 <div class="rounded-[28px] p-5 shadow-[var(--shadow)] {looks[look]}">
   <p class="text-[13px] {look === 'glass' ? 'text-muted' : 'opacity-70'}">{label}</p>
-  <p class="mt-3 text-4xl font-light tracking-tight">{value}</p>
+  <p class="mt-3 font-display text-4xl font-light tracking-tight tabular-nums">{value}</p>
   {#if hint}<p class="mt-2 text-xs {hintTone}">{hint}</p>{/if}
 </div>

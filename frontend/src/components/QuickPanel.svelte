@@ -98,7 +98,7 @@ const quit = () => getBridge().quitApp();
     <div class="flex items-start justify-between">
       <div>
         <p class="text-[13px] text-white/55">{dateText}</p>
-        <p class="text-[40px] leading-none font-light tracking-tight tabular-nums">{clock}</p>
+        <p class="font-display text-[40px] leading-none font-light tracking-tight tabular-nums">{clock}</p>
       </div>
       <span class="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs">
         <span class="size-2 rounded-full {!store.connected ? 'bg-bad' : status?.paused ? 'bg-warn' : status?.idle ? 'bg-white/40' : 'bg-good animate-pulse'}"></span>

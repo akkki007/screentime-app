@@ -1,5 +1,35 @@
 @import "tailwindcss";
-@import "@fontsource-variable/outfit";
+
+/*
+ * Fonts: Inter for text, Geist for headings and the big numbers. Both are
+ * variable (one file covers every weight), Latin only, and embedded in the
+ * binary, so nothing is fetched. The packages' own CSS would also bundle
+ * latin-ext, Cyrillic, Greek and Vietnamese (~250 KB more); anything outside
+ * these ranges falls back to the system font instead.
+ */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /* Design tokens. Components use these, never raw colours, so light/dark stay in sync. */
 :root {
@@ -84,7 +114,8 @@
   --color-sun: var(--sun);
   --color-dark: var(--dark);
   --color-on-dark: var(--on-dark);
-  --font-sans: "Outfit Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Geist Variable", "Inter Variable", system-ui, sans-serif;
 }
 
 html,
@@ -116,6 +147,12 @@ body {
 
   button {
     cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
   }
 }
 

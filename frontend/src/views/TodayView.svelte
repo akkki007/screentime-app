@@ -134,7 +134,7 @@ const dateText = new Date().toLocaleDateString(undefined, {
     </div>
     <div class="text-right" aria-label="Screen time today">
       <p class="text-[13px] text-muted">Screen time today</p>
-      <p class="text-[88px] leading-none font-extralight tracking-tighter tabular-nums">
+      <p class="font-display text-[88px] leading-none font-extralight tracking-tighter tabular-nums">
         {clock.h}<span class="text-muted/60">:</span>{clock.m}<span class="text-muted/50">:{clock.s}</span>
       </p>
     </div>

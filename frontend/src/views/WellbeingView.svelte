@@ -59,7 +59,7 @@ async function stopFocus() {
 		{#if focus?.active}
 			<div class="flex items-center justify-between gap-4">
 				<div>
-					<p class="text-3xl font-semibold tracking-tight tabular-nums">
+					<p class="font-display text-3xl font-semibold tracking-tight tabular-nums">
 						{Math.floor(remaining / 60_000)}:{String(Math.floor((remaining % 60_000) / 1000)).padStart(2, "0")}
 					</p>
 					<p class="text-xs text-muted">{focus.until ? `Ends at ${clockTime(focus.until)}` : ""}</p>
