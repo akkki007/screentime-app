@@ -158,6 +158,10 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 
 Notifications go to `org.freedesktop.Notifications`; a missing notification daemon is logged and never affects tracking.
 
+## Notch
+
+A black pill at the top centre of the screen shows today's total, the focus countdown, limit alerts, reminders and a greeting, and opens into a small panel ([ADR 14](adr/0014-top-of-screen-notch.md)). `internal/notch` decides what it shows from the daemon's events; each desktop only draws it. On Linux outside GNOME the tray process draws it with GTK 3 and cairo/Pango (`cmd/screentime/notch_gtk.go`, `notch_gtk.c`, with the geometry in `notch_layout.go`): a `wlr-layer-shell` surface when `libgtk-layer-shell.so.0` can be loaded (optional, found with `dlopen`), otherwise a dock-type, keep-above window at the top centre of the primary monitor. GNOME draws its own in the Shell extension, so the tray process skips it when `XDG_CURRENT_DESKTOP` contains `GNOME`. The window exists only while `notchEnabled` is on.
+
 ## Repo structure
 
 One monorepo using Bun workspaces. Each package can be built and tested on its own.

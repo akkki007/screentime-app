@@ -26,6 +26,8 @@ It is visible all day, so its cost is paid all day. A webview notch would hold W
 
 On Linux the GTK notch lives in the tray process, which already has GTK loaded, so it adds a few MB rather than a process. Where the extension draws the notch (GNOME), the tray process does not.
 
+The GTK notch as built (Linux, tray process): the window is created only while `notchEnabled` is on and destroyed when it is turned off, so the setting also gives the memory back. Measured on Ubuntu 26.04 against the tray without it: about +0.3 MB PSS on X11 and +0.9 MB under `wlr-layer-shell`. The layer surface is made once at the size of the largest view (the panel with four apps) and never resized: sway drops the keyboard from an on-demand surface whose size changes, which lost Escape the moment the panel opened. It is drawn inside that surface and input is limited to what is drawn; a dock window is resized and moved instead. While the panel is open an X11 dock window holds a pointer and keyboard grab, because the window manager never focuses a dock and a click elsewhere would not otherwise close the panel. Without a compositor the window is cut to the notch's shape rather than made transparent.
+
 ### What it shows
 
 One shared model, `internal/notch` (Go) and `adapters/gnome-extension/notch.js` (JavaScript, for the Shell), turns those events into what the pill shows. Both are tested against the same fixtures (`internal/notch/testdata/fixtures.json`), so the notch says the same thing on every desktop.
