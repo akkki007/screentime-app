@@ -1,6 +1,7 @@
 <script lang="ts">
 import AppAvatar from '../components/AppAvatar.svelte';
 import Card from '../components/Card.svelte';
+import Icon from '../components/Icon.svelte';
 import PlannerSlot from '../components/PlannerSlot.svelte';
 import { daemon } from '../lib/api';
 import { addDays, appLabel, formatDuration, startOfDay } from '../lib/format';
@@ -52,66 +53,57 @@ async function setCategory(appId: string, value: string) {
 </script>
 
 <div class="flex flex-col gap-5">
-	<header class="flex items-end justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Apps</h1>
-			<p class="text-sm text-muted">Usage over the last 7 days. Categories drive the charts, focus mode and category limits.</p>
-		</div>
-		<input
-			type="search"
-			bind:value={query}
-			placeholder="Search apps"
-			aria-label="Search apps"
-			class="w-56 rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] placeholder:text-muted"
-		/>
+	<header>
+		<h1 class="text-2xl font-medium tracking-tight">Apps</h1>
+		<p class="mt-1 text-[13px] text-muted">Usage over the last 7 days. Categories drive the charts, focus mode and category limits.</p>
 	</header>
 
 	<PlannerSlot load={() => import("../components/CategorizeAction.svelte")} />
 
-	<Card>
+	<Card flush>
+		<label class="flex items-center gap-3 border-b border-line px-5 py-4 text-muted">
+			<Icon name="search" size={18} />
+			<input
+				type="search"
+				bind:value={query}
+				placeholder="Search apps…"
+				aria-label="Search apps"
+				class="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-muted"
+			/>
+			<span class="shrink-0 text-xs tabular-nums">{rows.length} app{rows.length === 1 ? "" : "s"}</span>
+		</label>
+		<div class="flex items-center justify-between px-5 pt-4 pb-1 text-[13px] text-muted">
+			<span>Records</span>
+			<span>Last 7 days</span>
+		</div>
 		{#if rows.length === 0}
-			<p class="py-8 text-center text-sm text-muted">
+			<p class="px-5 py-10 text-center text-[13px] text-muted">
 				{store.apps.length === 0 ? "No apps tracked yet." : "No apps match your search."}
 			</p>
 		{:else}
-			<table class="w-full text-[13px]">
-				<thead>
-					<tr class="text-left text-xs text-muted">
-						<th class="pb-3 font-medium">App</th>
-						<th class="pb-3 font-medium">Category</th>
-						<th class="pb-3 text-right font-medium">Last 7 days</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each rows as app (app.appId)}
-						<tr class="border-t border-line">
-							<td class="py-2.5 pr-3">
-								<div class="flex items-center gap-3">
-									<AppAvatar appId={app.appId} size={28} />
-									<div class="min-w-0">
-										<p class="truncate font-medium">{app.label}</p>
-										<p class="truncate text-[11px] text-muted">{app.appId}</p>
-									</div>
-								</div>
-							</td>
-							<td class="py-2.5 pr-3">
-								<select
-									class="rounded-md border border-line bg-surface-2 px-2 py-1 text-[13px]"
-									aria-label="Category for {app.label}"
-									value={app.categoryId ?? ""}
-									onchange={(e) => setCategory(app.appId, e.currentTarget.value)}
-								>
-									<option value="">Uncategorized</option>
-									{#each store.categories as c (c.id)}
-										<option value={c.id}>{c.name}</option>
-									{/each}
-								</select>
-							</td>
-							<td class="py-2.5 text-right text-muted tabular-nums">{app.ms ? formatDuration(app.ms) : "—"}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<ul class="flex flex-col px-3 pb-3">
+				{#each rows as app (app.appId)}
+					<li class="flex items-center gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-surface-2">
+						<AppAvatar appId={app.appId} size={30} />
+						<p class="flex min-w-0 flex-1 items-baseline gap-2">
+							<span class="truncate text-[14px]">{app.label}</span>
+							<span class="truncate text-[13px] text-muted max-sm:hidden">{app.appId}</span>
+						</p>
+						<select
+							class="field w-40 py-1"
+							aria-label="Category for {app.label}"
+							value={app.categoryId ?? ""}
+							onchange={(e) => setCategory(app.appId, e.currentTarget.value)}
+						>
+							<option value="">Uncategorized</option>
+							{#each store.categories as c (c.id)}
+								<option value={c.id}>{c.name}</option>
+							{/each}
+						</select>
+						<span class="w-20 shrink-0 text-right text-[13px] text-muted tabular-nums">{app.ms ? formatDuration(app.ms) : "—"}</span>
+					</li>
+				{/each}
+			</ul>
 		{/if}
 	</Card>
 </div>

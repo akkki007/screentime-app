@@ -17,7 +17,9 @@ type Name =
   | 'alert'
   | 'check'
   | 'globe'
-  | 'x';
+  | 'x'
+  | 'search'
+  | 'chevron';
 
 const { name, size = 18 }: { name: Name; size?: number } = $props();
 
@@ -43,6 +45,8 @@ const paths: Record<Name, string> = {
   globe:
     '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
 };
 </script>
 
@@ -52,7 +56,7 @@ const paths: Record<Name, string> = {
 	viewBox="0 0 24 24"
 	fill="none"
 	stroke="currentColor"
-	stroke-width="1.8"
+	stroke-width="1.6"
 	stroke-linecap="round"
 	stroke-linejoin="round"
 	aria-hidden="true"

@@ -13,7 +13,7 @@ const {
 // A ring drawn as stroked circle arcs: one dash per slice, a small gap between.
 const RADIUS = 42;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const GAP = 1.6;
+const GAP = 2.4;
 
 const total = $derived(items.reduce((n, i) => n + i.value, 0));
 const arcs = $derived.by(() => {
@@ -42,7 +42,7 @@ const arcs = $derived.by(() => {
           r={RADIUS}
           fill="none"
           stroke={arc.color}
-          stroke-width="11"
+          stroke-width="9"
           stroke-dasharray={arc.dash}
           stroke-dashoffset={arc.offset}
           class="transition-opacity hover:opacity-75"
@@ -52,10 +52,10 @@ const arcs = $derived.by(() => {
       {/each}
     </svg>
     <div class="pointer-events-none absolute inset-0 grid place-content-center text-center">
-      <p class="text-[17px] leading-tight font-medium">{centerTitle}</p>
-      <p class="text-[11px] text-muted">{centerSub}</p>
+      <p class="font-display text-[18px] leading-tight font-medium tabular-nums">{centerTitle}</p>
+      <p class="text-xs text-muted">{centerSub}</p>
     </div>
   </div>
 {:else}
-  <div class="grid place-items-center text-sm text-muted" style="width: {size}px; height: {size}px">No data</div>
+  <div class="grid place-items-center text-[13px] text-muted" style="width: {size}px; height: {size}px">No data</div>
 {/if}

@@ -51,18 +51,18 @@ async function stopFocus() {
 
 <div class="flex flex-col gap-5">
 	<header>
-		<h1 class="text-2xl font-semibold tracking-tight">Wellbeing</h1>
-		<p class="text-sm text-muted">Gentle nudges to take breaks, wind down and stay focused.</p>
+		<h1 class="text-2xl font-medium tracking-tight">Wellbeing</h1>
+		<p class="mt-1 text-[13px] text-muted">Gentle nudges to take breaks, wind down and stay focused.</p>
 	</header>
 
 	<Card title="Focus mode" subtitle="Get a nudge whenever a distracting app takes focus">
 		{#if focus?.active}
 			<div class="flex items-center justify-between gap-4">
 				<div>
-					<p class="font-display text-3xl font-semibold tracking-tight tabular-nums">
+					<p class="font-display text-[32px] leading-none font-medium tracking-tight tabular-nums">
 						{Math.floor(remaining / 60_000)}:{String(Math.floor((remaining % 60_000) / 1000)).padStart(2, "0")}
 					</p>
-					<p class="text-xs text-muted">{focus.until ? `Ends at ${clockTime(focus.until)}` : ""}</p>
+					<p class="mt-1.5 text-[13px] text-muted">{focus.until ? `Ends at ${clockTime(focus.until)}` : ""}</p>
 				</div>
 				<Button variant="danger" onclick={stopFocus}><Icon name="x" size={14} /> End focus mode</Button>
 			</div>
@@ -91,7 +91,7 @@ async function stopFocus() {
 						type="number"
 						min="5"
 						max="240"
-						class="w-20 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-right"
+						class="w-20 field text-right"
 						aria-label="Minutes of activity before a break reminder"
 						value={settings.breakEveryMinutes}
 						disabled={!settings.breakRemindersEnabled}
@@ -109,7 +109,7 @@ async function stopFocus() {
 						type="number"
 						min="1"
 						max="60"
-						class="w-20 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-right"
+						class="w-20 field text-right"
 						aria-label="Minutes away that count as a break"
 						value={settings.breakLengthMinutes}
 						disabled={!settings.breakRemindersEnabled}
@@ -131,7 +131,7 @@ async function stopFocus() {
 				<div class="flex items-center gap-2 text-[13px]">
 					<input
 						type="time"
-						class="rounded-lg border border-line bg-surface-2 px-2 py-1.5"
+						class="field"
 						aria-label="Downtime start"
 						value={settings.downtimeStart}
 						disabled={!settings.downtimeEnabled}
@@ -140,7 +140,7 @@ async function stopFocus() {
 					<span class="text-muted">to</span>
 					<input
 						type="time"
-						class="rounded-lg border border-line bg-surface-2 px-2 py-1.5"
+						class="field"
 						aria-label="Downtime end"
 						value={settings.downtimeEnd}
 						disabled={!settings.downtimeEnabled}

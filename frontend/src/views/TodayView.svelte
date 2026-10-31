@@ -1,22 +1,15 @@
 <script lang="ts">
 import type { Session } from '@screentime/shared';
+import AppAvatar from '../components/AppAvatar.svelte';
 import BarChart from '../components/BarChart.svelte';
 import Card from '../components/Card.svelte';
+import DetailRow from '../components/DetailRow.svelte';
 import Donut from '../components/Donut.svelte';
 import NowCard from '../components/NowCard.svelte';
 import PlannerSlot from '../components/PlannerSlot.svelte';
-import StatTile from '../components/StatTile.svelte';
 import Timeline from '../components/Timeline.svelte';
 import UsageList from '../components/UsageList.svelte';
-import {
-  addDays,
-  appLabel,
-  dateKey,
-  formatDuration,
-  formatShort,
-  percent,
-  startOfDay,
-} from '../lib/format';
+import { addDays, appLabel, dateKey, formatShort, percent, startOfDay } from '../lib/format';
 import { store } from '../lib/store.svelte';
 import {
   type RangeUsage,
@@ -106,17 +99,6 @@ const clock = $derived.by(() => {
   };
 });
 
-const weekdayDay = new Date().toLocaleDateString(undefined, {
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
-const weekNumber = (() => {
-  const d = new Date();
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
-})();
-
 const dateText = new Date().toLocaleDateString(undefined, {
   weekday: 'long',
   month: 'long',
@@ -124,63 +106,62 @@ const dateText = new Date().toLocaleDateString(undefined, {
 });
 </script>
 
-<div class="flex flex-col gap-6">
-  <section class="grid items-end gap-6 lg:grid-cols-2">
+<div class="flex flex-col gap-5">
+  <header class="flex items-end justify-between gap-4">
     <div>
-      <h1 class="text-[40px] leading-[1.05] font-normal tracking-tight">
-        Keep track of<br /><span class="text-muted/70">where your time goes</span>
-      </h1>
-      <p class="mt-3 text-sm text-muted">{dateText}</p>
+      <h1 class="text-2xl font-medium tracking-tight">Today</h1>
+      <p class="mt-1 text-[13px] text-muted">{dateText}</p>
     </div>
-    <div class="text-right" aria-label="Screen time today">
-      <p class="text-[13px] text-muted">Screen time today</p>
-      <p class="font-display text-[88px] leading-none font-extralight tracking-tighter tabular-nums">
-        {clock.h}<span class="text-muted/60">:</span>{clock.m}<span class="text-muted/50">:{clock.s}</span>
-      </p>
-    </div>
-  </section>
+  </header>
 
   <PlannerSlot load={() => import('../components/PlanCard.svelte')} />
 
   {#if loadError}
-    <p class="rounded-2xl bg-bad/10 p-3 text-sm text-bad" role="alert">{loadError}</p>
+    <p class="rounded-xl border border-bad/30 bg-bad/5 p-3 text-[13px] text-bad" role="alert">{loadError}</p>
   {/if}
 
   <div class="grid gap-5 lg:grid-cols-5">
     <div class="flex flex-col gap-5 lg:col-span-2">
+      <Card title="Screen time today">
+        <p class="font-display text-[44px] leading-none font-medium tracking-tight tabular-nums" aria-label="Screen time today">
+          {clock.h}<span class="text-muted/50">:</span>{clock.m}<span class="text-muted/50">:{clock.s}</span>
+        </p>
+        <div class="mt-4">
+          <DetailRow label="Vs. yesterday" dashed>
+            <span class={delta > 0 ? 'text-bad' : delta < 0 ? 'text-good' : ''}>{delta >= 0 ? '+' : '−'}{formatShort(Math.abs(delta))}</span>
+            <span class="font-normal text-muted">({formatShort(yesterdaySoFar)} by now)</span>
+          </DetailRow>
+          <DetailRow label="Most used" dashed>
+            {#if topApp}
+              <AppAvatar appId={topApp.key} size={20} />
+              <span class="truncate">{appLabel(topApp.key, store.appName(topApp.key))}</span>
+            {:else}
+              <span class="text-muted">—</span>
+            {/if}
+          </DetailRow>
+          <DetailRow label="Productive" dashed>
+            <span class="size-2 rounded-full bg-good"></span>
+            {percent(productiveMs, total)}%
+            <span class="font-normal text-muted">({formatShort(productiveMs)})</span>
+          </DetailRow>
+        </div>
+      </Card>
       <NowCard />
-      <div class="grid grid-cols-2 gap-5">
-        <StatTile
-          label="Vs. yesterday"
-          value={`${delta >= 0 ? '+' : '−'}${formatShort(Math.abs(delta))}`}
-          hint={`${formatShort(yesterdaySoFar)} by this time`}
-          tone={delta > 0 ? 'bad' : delta < 0 ? 'good' : 'neutral'}
-        />
-        <StatTile
-          label="Most used"
-          value={topApp ? appLabel(topApp.key, store.appName(topApp.key)) : '—'}
-          hint={topApp ? formatDuration(topApp.ms) : undefined}
-        />
-      </div>
-      <div class="grid grid-cols-2 gap-5">
-        <StatTile look="orange" label="Today" value={weekdayDay} hint={`Week ${weekNumber}`} />
-        <StatTile look="sun" label="Productive" value={`${percent(productiveMs, total)}%`} hint={formatDuration(productiveMs)} />
-      </div>
     </div>
 
     <div class="flex flex-col gap-5 lg:col-span-3">
       <Card title="By hour">
-        <BarChart labels={hourLabels} values={hours} highlight={new Date().getHours()} height={200} />
+        <BarChart labels={hourLabels} values={hours} highlight={new Date().getHours()} height={190} />
       </Card>
       <Card title="By category">
         <div class="flex items-center gap-6">
-          <Donut items={slices} centerTitle={formatShort(total)} centerSub="today" size={160} />
-          <ul class="grid min-w-0 flex-1 grid-cols-1 gap-2 text-[13px] sm:grid-cols-2">
+          <Donut items={slices} centerTitle={formatShort(total)} centerSub="today" size={140} />
+          <ul class="flex min-w-0 flex-1 flex-col">
             {#each slices.slice(0, 6) as s (s.name)}
-              <li class="flex items-center gap-2">
-                <span class="size-2.5 shrink-0 rounded-full" style="background: {s.color}"></span>
+              <li class="flex items-center gap-2.5 py-1.5 text-[13px]">
+                <span class="size-2 shrink-0 rounded-full" style="background: {s.color}"></span>
                 <span class="flex-1 truncate">{s.name}</span>
-                <span class="rounded-full bg-accent/20 px-2 py-0.5 text-[11px] font-medium tabular-nums">{formatShort(s.value)}</span>
+                <span class="text-muted tabular-nums">{formatShort(s.value)}</span>
               </li>
             {/each}
           </ul>

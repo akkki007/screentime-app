@@ -23,20 +23,22 @@ function onkeydown(e: KeyboardEvent) {
 <svelte:window {onkeydown} />
 
 <div
-	class="fixed inset-0 z-40 grid place-items-center bg-black/45 p-4 backdrop-blur-sm"
+	class="fixed inset-0 z-40 grid place-items-center bg-black/30 p-4"
 	role="presentation"
 	onclick={(e) => e.target === e.currentTarget && onclose()}
 >
 	<div
-		class="w-full {width} rounded-2xl border border-line bg-surface-raised p-6 shadow-2xl"
+		class="w-full {width} overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-pop)]"
 		role="dialog"
 		aria-modal="true"
 		aria-label={title}
 	>
-		<h2 class="mb-4 text-lg font-semibold">{title}</h2>
-		{@render children()}
+		<div class="p-6">
+			<h2 class="mb-4 text-[17px] font-medium tracking-tight">{title}</h2>
+			{@render children()}
+		</div>
 		{#if footer}
-			<div class="mt-6 flex justify-end gap-2">{@render footer()}</div>
+			<div class="flex justify-end gap-2 border-t border-line bg-surface-2/70 px-6 py-3">{@render footer()}</div>
 		{/if}
 	</div>
 </div>

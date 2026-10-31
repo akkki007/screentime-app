@@ -51,7 +51,7 @@ async function suggest() {
 		>
 			<Icon name="bolt" size={14} />
 			{busy ? "Thinking…" : "Suggest categories for uncategorized apps"}
-			{#if !busy && uncategorized.length > 0}<span class="rounded-full bg-accent/20 px-1.5 text-[11px] tabular-nums">{uncategorized.length}</span>{/if}
+			{#if !busy && uncategorized.length > 0}<span class="rounded-md bg-accent-soft px-1.5 text-[11px] text-accent tabular-nums">{uncategorized.length}</span>{/if}
 		</Button>
 		{#if status?.provider === "remote" && status.host}
 			<p class="text-xs text-muted">Sends the names of those apps to {status.host}.</p>

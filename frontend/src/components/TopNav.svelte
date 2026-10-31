@@ -2,17 +2,13 @@
 import { type ViewId, store } from '../lib/store.svelte';
 import Icon from './Icon.svelte';
 
-const items: {
-  id: ViewId;
-  label: string;
-  icon: 'today' | 'week' | 'apps' | 'limits' | 'wellbeing' | 'settings';
-}[] = [
-  { id: 'today', label: 'Dashboard', icon: 'today' },
-  { id: 'week', label: 'Trends', icon: 'week' },
-  { id: 'apps', label: 'Apps', icon: 'apps' },
-  { id: 'limits', label: 'Limits', icon: 'limits' },
-  { id: 'wellbeing', label: 'Wellbeing', icon: 'wellbeing' },
-  { id: 'settings', label: 'Settings', icon: 'settings' },
+const items: { id: ViewId; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'week', label: 'Trends' },
+  { id: 'apps', label: 'Apps' },
+  { id: 'limits', label: 'Limits' },
+  { id: 'wellbeing', label: 'Wellbeing' },
+  { id: 'settings', label: 'Settings' },
 ];
 
 const state = $derived(
@@ -22,38 +18,38 @@ const state = $derived(
       ? { text: 'Paused', dot: 'bg-warn' }
       : store.status?.idle
         ? { text: 'Idle', dot: 'bg-muted' }
-        : { text: 'Tracking', dot: 'bg-good animate-pulse' },
+        : { text: 'Tracking', dot: 'bg-good' },
 );
 </script>
 
-<!-- Narrow windows (the window has a minimum size, but the panel can still be narrow): the wordmark and
-     status text collapse first, then the brand mark and active label; below
-     that the nav scrolls rather than overflowing the page. -->
-<header class="flex items-center justify-between gap-3 px-4 pt-6 sm:gap-4 sm:px-8">
-  <div class="flex shrink-0 items-center gap-2.5 max-sm:hidden">
-    <span class="grid size-9 place-items-center rounded-full bg-dark text-on-dark"><Icon name="today" size={18} /></span>
-    <span class="text-[17px] font-medium tracking-tight max-md:hidden">Screentime</span>
-  </div>
+<!-- One bar: the wordmark, the tabs (an underline marks the current one), and the
+     tracker's state. On narrow windows the wordmark and status text collapse
+     first; below that the tabs scroll rather than overflowing. -->
+<header class="border-b border-line bg-surface">
+  <div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-8">
+    <div class="flex shrink-0 items-center gap-2.5 max-sm:hidden">
+      <span class="grid size-7 place-items-center rounded-lg bg-dark text-on-dark"><Icon name="today" size={15} /></span>
+      <span class="text-[15px] font-medium tracking-tight max-md:hidden">Screentime</span>
+    </div>
 
-  <nav class="-my-3 flex min-w-0 items-center gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
-    {#each items as item (item.id)}
-      {@const active = store.view === item.id}
-      <button
-        class="flex h-11 items-center gap-2 rounded-full transition
-          {active ? 'shrink-0 bg-dark text-on-dark shadow-lg max-sm:w-11 max-sm:justify-center sm:px-5' : 'w-11 shrink-0 justify-center bg-surface text-muted backdrop-blur-xl hover:text-ink'}"
-        aria-current={active ? 'page' : undefined}
-        aria-label={item.label}
-        title={item.label}
-        onclick={() => (store.view = item.id)}
-      >
-        <Icon name={item.icon} size={17} />
-        {#if active}<span class="text-[13px] font-medium max-sm:hidden">{item.label}</span>{/if}
-      </button>
-    {/each}
-  </nav>
+    <nav class="flex h-full min-w-0 flex-1 items-stretch gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
+      {#each items as item (item.id)}
+        {@const active = store.view === item.id}
+        <button
+          class="relative shrink-0 px-3 text-[14px] transition-colors
+            {active ? 'text-accent' : 'text-muted hover:text-ink'}"
+          aria-current={active ? 'page' : undefined}
+          onclick={() => (store.view = item.id)}
+        >
+          {item.label}
+          {#if active}<span class="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent"></span>{/if}
+        </button>
+      {/each}
+    </nav>
 
-  <div class="flex shrink-0 items-center gap-2 rounded-full bg-surface px-3.5 py-2.5 text-xs backdrop-blur-xl md:px-4" role="status" title={state.text}>
-    <span class="size-2 rounded-full {state.dot}"></span>
-    <span class="max-md:sr-only">{state.text}</span>
+    <div class="flex h-8 shrink-0 items-center gap-2 rounded-[10px] border border-line px-3 text-[13px] text-muted shadow-[var(--shadow)]" role="status" title={state.text}>
+      <span class="size-2 rounded-full {state.dot}"></span>
+      <span class="max-md:sr-only">{state.text}</span>
+    </div>
   </div>
 </header>
