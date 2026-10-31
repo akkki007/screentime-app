@@ -1,3 +1,5 @@
+//go:build unix
+
 package rpc
 
 import (
@@ -9,7 +11,7 @@ import (
 
 func tempSocket(t *testing.T, dirMode os.FileMode) (string, net.Listener) {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "s")
+	dir := filepath.Join(shortDir(t), "s") // t.TempDir() is too long for a socket on macOS
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}

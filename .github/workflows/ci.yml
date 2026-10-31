@@ -69,12 +69,36 @@ jobs:
 
       - name: Test
         run: |
-          Xvfb :99 -screen 0 640x480x24 &
+          Xvfb :99 -noreset -screen 0 640x480x24 &
           SCREENTIME_TEST_X_DISPLAY=:99 go test -race ./...
 
       - name: Vulnerability check
         # Pinned as a module tool (go.mod), so go.sum locks its version.
         run: go tool govulncheck ./...
+
+  # The daemon builds and runs on Windows and macOS (ADR 13). Only the daemon:
+  # the UI shell, packaging and notifications are Linux-only for now.
+  go-portable:
+    name: Daemon on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+
+      # macOS builds with cgo (the Objective-C focus provider); Windows has none.
+      - name: Build screentimed
+        run: go build ./cmd/screentimed ./cmd/screentime-fetch
+
+      - name: Test
+        run: go test ./internal/focus/ ./internal/rpc/ ./internal/store/ ./cmd/screentimed/
 
   contract-go:
     name: Contract fixtures against screentimed

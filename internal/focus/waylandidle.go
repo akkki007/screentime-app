@@ -1,3 +1,5 @@
+//go:build linux
+
 package focus
 
 import (
@@ -79,6 +81,12 @@ func (w *wlConn) send(object uint32, opcode uint16, args ...any) error {
 			for len(body)%4 != 0 {
 				body = append(body, 0)
 			}
+		case []byte: // an array: its length, the bytes, and padding
+			body = wlOrder.AppendUint32(body, uint32(len(v)))
+			body = append(body, v...)
+			for len(body)%4 != 0 {
+				body = append(body, 0)
+			}
 		default:
 			panic(fmt.Sprintf("wayland: unsupported argument %T", a))
 		}
@@ -106,7 +114,8 @@ func (w *wlConn) read() (object uint32, opcode uint16, body []byte, err error) {
 	return
 }
 
-// wlArgs decodes a body with uint32 ('u') and string ('s') arguments.
+// wlArgs decodes a body with uint32 ('u'), string ('s') and array ('a')
+// arguments.
 func wlArgs(body []byte, sig string) ([]any, error) {
 	var out []any
 	for _, t := range sig {
@@ -128,6 +137,13 @@ func wlArgs(body []byte, sig string) ([]any, error) {
 				return nil, errors.New("wayland: short string")
 			}
 			out = append(out, string(body[:n-1]))
+			body = body[padded:]
+		case 'a':
+			padded := (int(n) + 3) &^ 3
+			if padded > len(body) {
+				return nil, errors.New("wayland: short array")
+			}
+			out = append(out, body[:n])
 			body = body[padded:]
 		}
 	}
@@ -167,6 +183,30 @@ func (w *wlConn) roundtrip(handle func(object uint32, opcode uint16, body []byte
 	}
 }
 
+// globals binds the registry and returns its ID and the name of each global
+// by interface (the first, for a repeated one: the first seat is the user's).
+func (w *wlConn) globals() (registry uint32, names map[string]uint32, err error) {
+	registry = w.newID()
+	if err = w.send(wlDisplayID, opDisplayGetRegistry, registry); err != nil {
+		return
+	}
+	names = map[string]uint32{}
+	err = w.roundtrip(func(object uint32, opcode uint16, body []byte) error {
+		if object != registry || opcode != evRegistryGlob {
+			return nil
+		}
+		args, err := wlArgs(body, "usu")
+		if err != nil {
+			return err
+		}
+		if _, ok := names[args[1].(string)]; !ok {
+			names[args[1].(string)] = args[0].(uint32)
+		}
+		return nil
+	})
+	return
+}
+
 // WatchWaylandIdle asks the compositor to report when there has been no
 // input for thresholdMs, and when input resumes. Like the screen blanking it
 // is meant for, it honours idle inhibitors, so a playing video is not idle.
@@ -184,33 +224,12 @@ func WatchWaylandIdle(socket string, thresholdMs int64, cb func(idle bool)) (sto
 	// Setup must not hang the daemon on a compositor that never answers.
 	c.SetDeadline(time.Now().Add(5 * time.Second))
 
-	registry := w.newID()
-	if err := w.send(wlDisplayID, opDisplayGetRegistry, registry); err != nil {
-		return fail(err)
-	}
-	var seatName, notifierName uint32
-	var haveSeat, haveNotifier bool
-	err = w.roundtrip(func(object uint32, opcode uint16, body []byte) error {
-		if object != registry || opcode != evRegistryGlob {
-			return nil
-		}
-		args, err := wlArgs(body, "usu")
-		if err != nil {
-			return err
-		}
-		switch args[1].(string) {
-		case "wl_seat":
-			if !haveSeat { // the first seat is the user's
-				seatName, haveSeat = args[0].(uint32), true
-			}
-		case "ext_idle_notifier_v1":
-			notifierName, haveNotifier = args[0].(uint32), true
-		}
-		return nil
-	})
+	registry, names, err := w.globals()
 	if err != nil {
 		return fail(err)
 	}
+	seatName, haveSeat := names["wl_seat"]
+	notifierName, haveNotifier := names["ext_idle_notifier_v1"]
 	if !haveNotifier {
 		return fail(errors.New("the compositor does not support ext-idle-notify-v1"))
 	}

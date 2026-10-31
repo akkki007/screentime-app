@@ -8,7 +8,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 )
+
+// utf16Len is how Zod's max() counts a string, so a limit means the same
+// for both implementations on non-ASCII text.
+func utf16Len(s string) int { return len(utf16.Encode([]rune(s))) }
 
 // Issue is one validation problem, reported as "path: message" like the Zod
 // schemas in packages/shared, so the UI can show it next to the field.
@@ -220,8 +225,7 @@ func (o *object) str(key string, required bool, maxLen int, re *regexp.Regexp, r
 		o.fail(key, "Expected string, received "+jsonType(raw))
 		return "", false
 	}
-	// Zod counts UTF-16 code units; domains are ASCII, so bytes agree.
-	if maxLen > 0 && len(v) > maxLen {
+	if maxLen > 0 && utf16Len(v) > maxLen {
 		o.fail(key, fmt.Sprintf("String must contain at most %d character(s)", maxLen))
 		return "", false
 	}

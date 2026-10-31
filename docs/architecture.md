@@ -7,7 +7,7 @@ Sep 25, 2026 · @Akshay
 An open-source, local-first screentime and digital wellbeing app for Linux: track app usage, show insights, nudge breaks, enforce limits.
 
 - **First target:** Ubuntu, GNOME on Wayland (the maintainer's setup, and the hardest case).
-- **Later:** KDE Wayland, wlroots (Hyprland/Sway), X11.
+- **Also:** KDE Wayland, wlroots (Sway, Hyprland, river, labwc and others) and X11. The daemon alone also builds for Windows and macOS ([ADR 13](adr/0013-windows-and-macos-providers.md)); the UI shell, packaging and notifications there are not started.
 - **Principles:** local-only data, no telemetry, low idle footprint, pluggable per-desktop adapters.
 - **Non-goals (v1):** cloud sync, mobile, multi-user parental controls.
 
@@ -43,7 +43,7 @@ The daemon and native host are Go; the dashboard, browser extension and shared s
 | --- | --- | --- |
 | Desktop shell | Wails v3 (WebKitGTK 4.1 via `-tags gtk3`, Go): a tray process, and one short-lived process per window | Tray and multiple windows built in; one 10 MB binary; a closed window gives all its memory back; see [ADR 9](adr/0009-wails-v3-ui-shell.md), [ADR 10](adr/0010-windows-run-as-their-own-processes.md) |
 | UI | Svelte 5 + Tailwind 4 | Light runtime, runs well on WebKitGTK |
-| Charts | uPlot (bars), hand-written SVG (donut) | uPlot is ~45 KB; ECharts for one donut added ~400 KB, so it was dropped |
+| Charts | Hand-written SVG (bars, donut) | uPlot was ~53 KB of the bundle for one bar chart; ECharts for one donut added ~400 KB. Both were dropped |
 | Daemon | Go (`cmd/screentimed`) | One small static binary (~8 MB, ~10 MB idle); build tags for per-OS providers |
 | D-Bus | `github.com/godbus/dbus/v5` on one persistent connection | Real idle watches and unicast signals; replaced the `gdbus` subprocess of [ADR 6](adr/0006-dbus-through-gdbus.md) |
 | Storage | SQLite via `modernc.org/sqlite` (pure Go, no cgo), WAL mode | Zero-dependency, fast, easy to back up |
@@ -73,10 +73,12 @@ type FocusedWindow = { appId: string; title?: string; pid?: number; ts: number }
 | --- | --- | --- | --- |
 | gnome-wayland | Own Shell extension that emits `FocusChanged` on the session bus | `org.gnome.Mutter.IdleMonitor` | v1 |
 | x11 | `_NET_ACTIVE_WINDOW` over the X protocol (xgb) | MIT-SCREEN-SAVER extension | v1.x |
+| windows | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`, app = exe name ([ADR 13](adr/0013-windows-and-macos-providers.md)) | `GetLastInputInfo`, polled | daemon only, untested on hardware |
+| macos | `NSWorkspaceDidActivateApplicationNotification` through cgo, app = bundle ID ([ADR 13](adr/0013-windows-and-macos-providers.md)) | `CGEventSourceSecondsSinceLastEventType`, polled | daemon only, untested on hardware |
 | kde-wayland | KWin script that calls the daemon over D-Bus ([ADR 11](adr/0011-kde-wayland-adapter.md)) | `ext-idle-notify-v1` | v2, implemented |
-| hyprland / sway | IPC socket events | `ext-idle-notify-v1` | v2 |
+| wlroots | `zwlr_foreign_toplevel_management_unstable_v1` ([ADR 12](adr/0012-wlroots-adapter.md)) | `ext-idle-notify-v1` | v2, implemented |
 
-- **App identity:** `appId` = the `.desktop` file ID (e.g. `org.mozilla.firefox`), with WM\_CLASS as the fallback. Icons and names come from the `.desktop` files.
+- **App identity:** `appId` = the `.desktop` file ID (e.g. `org.mozilla.firefox`), with WM\_CLASS as the fallback. Icons and names come from the `.desktop` files. On Windows it is the lowercased exe name (`chrome`), on macOS the bundle identifier (`com.apple.Safari`); neither has icons or display names yet.
 - **Window titles:** opt-in only, because they often contain private data.
 
 ## Data model
@@ -105,7 +107,7 @@ CREATE INDEX idx_sessions_start ON sessions(start_ts);
 CREATE INDEX idx_web_sessions_start ON web_sessions(start_ts);
 ```
 
-Categories are seeded (Development, Productivity, Communication, Social, Entertainment, Browsing, Utilities, Other) and apps are categorised by ID on first sight (`packages/shared/src/categories.ts`); a category chosen by the user is never overwritten. `categories.productive` is 1 productive, 0 distracting, NULL neutral.
+Categories are seeded (Development, Productivity, Communication, Social, Entertainment, Browsing, Utilities, Other) and apps are categorised on first sight by ID substring rules (`packages/shared/src/categories.ts`), then by the `Categories=` key of their `.desktop` file (`internal/categories`), and `apps.category_source` (`auto` or `user`) records who chose, so a category chosen by the user is never overwritten while uncategorised or Other apps are re-evaluated at daemon start. `categories.productive` is 1 productive, 0 distracting, NULL neutral.
 
 - **Heartbeat:** every 5 s while focused. The open session's `end_ts` is updated in place, so a crash loses 5 s at most. When the user switches apps the old session ends at the switch, not at the last heartbeat.
 - **Suspend:** a heartbeat gap well over 10 s means the machine slept; the session is split there instead of being stretched across the gap.
@@ -130,6 +132,10 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 | `tracker.pause` / `.resume` / `.status` | UI → daemon | `{minutes}` → `{resumeAt}` / `{ok}` / current state |
 | `focus.start` / `.stop` | UI → daemon | `{minutes}` → `{until}` / `{ok}` |
 | `data.export` / `data.wipe` | UI → daemon | `{format, from?, to?}` → `{filename, content}` / `{everything}` → `{ok}` |
+| `planner.status` / `.stop` | UI → daemon | none → `{enabled, provider, state, serverFound, modelFound, keySet, host, lastError}` / `{ok}`. Optional planner, see ADR 8; works while it is off |
+| `planner.setKey` | UI → daemon | `{key}` (empty clears) → `{ok}`; stored in `planner.key` (0600), never returned |
+| `planner.suggest` | UI → daemon | `{goal?}` → `{summary, suggestions: [{kind, appId?, categoryId?, minutes?, reason}]}`; validated, never applies anything. Error "planner is off" when disabled |
+| `planner.categorize` | UI → daemon | `{appIds?}` → `[{appId, categoryId, confidence}]`; only auto-categorised apps left in Other, stored with `category_source = model` |
 | `event.status` | daemon → UI (notification) | full tracker status, on any state change |
 | `event.focus` | daemon → UI (notification) | `{appId, since}`, for a live "now" view |
 | `event.limitHit` | daemon → UI (notification) | `{limitId, action}` |
@@ -151,6 +157,10 @@ The UI talks to the daemon with JSON-RPC 2.0 over `$XDG_RUNTIME_DIR/<app>/daemon
 - **Focus mode:** for N minutes, a nudge when an app in a category marked distracting (`productive = 0`) takes focus (rate limited), and a notice when the session ends.
 
 Notifications go to `org.freedesktop.Notifications`; a missing notification daemon is logged and never affects tracking.
+
+## Notch
+
+A black pill at the top centre of the screen shows today's total, the focus countdown, limit alerts, reminders and a greeting, and opens into a small panel ([ADR 14](adr/0014-top-of-screen-notch.md)). `internal/notch` decides what it shows from the daemon's events; each desktop only draws it. On Linux outside GNOME the tray process draws it with GTK 3 and cairo/Pango (`cmd/screentime/notch_gtk.go`, `notch_gtk.c`, with the geometry in `notch_layout.go`): a `wlr-layer-shell` surface when `libgtk-layer-shell.so.0` can be loaded (optional, found with `dlopen`), otherwise a dock-type, keep-above window at the top centre of the primary monitor. GNOME draws its own in the Shell extension, so the tray process skips it when `XDG_CURRENT_DESKTOP` contains `GNOME`. The window exists only while `notchEnabled` is on.
 
 ## Repo structure
 
@@ -199,7 +209,7 @@ A phase starts only after the previous phase meets its exit criteria. **Status**
 - **Docs:** `docs/architecture.md` (this doc), `docs/adapters.md` (how to add a desktop), ADRs in `docs/adr/`.
 - **CI:** lint, typecheck, `bun test`, and a build of every package on each PR. Tagged releases publish the .deb and AppImage.
 - **Conventions:** Conventional Commits, semver, changesets for the changelog.
-- **Privacy promise:** no network calls from the daemon, data stays in `~/.local/share`, titles off by default, one-click data wipe (Settings → Your data). The browser extension sends only the hostname, never the path, query or title, and ignores private windows. This is in the README.
+- **Privacy promise:** no network calls from the daemon (except the optional, off-by-default planner with a remote provider, aggregates only), data stays in `~/.local/share`, titles off by default, one-click data wipe (Settings → Your data). The browser extension sends only the hostname, never the path, query or title, and ignores private windows. This is in the README.
 - **Good first contributions:** new desktop adapters, app categories, UI translations.
 
 ## Risks and open questions

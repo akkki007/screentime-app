@@ -19,6 +19,29 @@
       "receive": [
         {
           "jsonrpc": "2.0",
+          "method": "event.settings",
+          "params": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": false,
+            "breakEveryMinutes": 50,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "22:00",
+            "downtimeEnd": "07:00",
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
+          }
+        },
+        {
+          "jsonrpc": "2.0",
           "id": 1,
           "result": {
             "captureTitles": true,
@@ -29,7 +52,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "22:00",
             "downtimeEnd": "07:00",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]
@@ -49,6 +80,29 @@
       "receive": [
         {
           "jsonrpc": "2.0",
+          "method": "event.settings",
+          "params": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": true,
+            "breakEveryMinutes": 25,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "23:15",
+            "downtimeEnd": "06:45",
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
+          }
+        },
+        {
+          "jsonrpc": "2.0",
           "id": 2,
           "result": {
             "captureTitles": true,
@@ -59,7 +113,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "23:15",
             "downtimeEnd": "06:45",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]
@@ -74,6 +136,29 @@
       "receive": [
         {
           "jsonrpc": "2.0",
+          "method": "event.settings",
+          "params": {
+            "captureTitles": true,
+            "idleThresholdMinutes": 5,
+            "breakRemindersEnabled": true,
+            "breakEveryMinutes": 25,
+            "breakLengthMinutes": 5,
+            "downtimeEnabled": false,
+            "downtimeStart": "23:15",
+            "downtimeEnd": "06:45",
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
+          }
+        },
+        {
+          "jsonrpc": "2.0",
           "id": 3,
           "result": {
             "captureTitles": true,
@@ -84,7 +169,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "23:15",
             "downtimeEnd": "06:45",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]
@@ -108,7 +201,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "23:15",
             "downtimeEnd": "06:45",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]

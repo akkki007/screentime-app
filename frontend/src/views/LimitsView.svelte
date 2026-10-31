@@ -37,6 +37,7 @@ $effect(() => {
 });
 
 function usedToday(limit: Limit): number {
+  if (limit.targetType === 'total') return usage?.byApp.reduce((sum, r) => sum + r.ms, 0) ?? 0;
   const rows =
     limit.targetType === 'app'
       ? usage?.byApp
@@ -47,6 +48,7 @@ function usedToday(limit: Limit): number {
 }
 
 function targetLabel(limit: Limit): string {
+  if (limit.targetType === 'total') return 'All apps';
   return limit.targetType === 'app'
     ? appLabel(limit.target, store.appName(limit.target))
     : limit.target;
@@ -106,11 +108,13 @@ function changeType(type: Limit['targetType']) {
   if (!draft) return;
   draft.targetType = type;
   draft.target =
-    type === 'app'
-      ? (store.apps[0]?.appId ?? '')
-      : type === 'category'
-        ? (store.categories[0]?.name ?? '')
-        : '';
+    type === 'total'
+      ? 'all'
+      : type === 'app'
+        ? (store.apps[0]?.appId ?? '')
+        : type === 'category'
+          ? (store.categories[0]?.name ?? '')
+          : '';
 }
 
 /** "https://www.YouTube.com/watch?v=1" -> "www.youtube.com" */
@@ -200,13 +204,13 @@ async function remove() {
 							<AppAvatar appId={limit.target} size={36} />
 						{:else}
 							<span class="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
-								<Icon name={limit.targetType === "category" ? "apps" : "globe"} size={16} />
+								<Icon name={limit.targetType === "category" || limit.targetType === "total" ? "apps" : "globe"} size={16} />
 							</span>
 						{/if}
 						<div class="min-w-0 flex-1">
 							<p class="truncate font-medium">{targetLabel(limit)}</p>
 							<p class="text-xs text-muted">
-								<span class="capitalize">{limit.targetType}</span> · {ACTIONS[limit.action]}{limit.schedule ? ` · ${limit.schedule.replace("-", "–")}` : ""}
+								<span class="capitalize">{limit.targetType === "total" ? "everything" : limit.targetType}</span> · {ACTIONS[limit.action]}{limit.schedule ? ` · ${limit.schedule.replace("-", "–")}` : ""}
 							</p>
 						</div>
 						<Button variant="ghost" title="Edit limit" onclick={() => edit(limit)}><Icon name="edit" size={15} /></Button>
@@ -243,12 +247,15 @@ async function remove() {
 					<option value="app">App</option>
 					<option value="category">Category</option>
 					<option value="domain">Website</option>
+					<option value="total">All apps</option>
 				</select>
 			</label>
 
 			<label class="flex flex-col gap-1.5 text-[13px] font-medium">
-				{d.targetType === "app" ? "App" : d.targetType === "category" ? "Category" : "Website"}
-				{#if d.targetType === "app"}
+				{d.targetType === "total" ? "Applies to" : d.targetType === "app" ? "App" : d.targetType === "category" ? "Category" : "Website"}
+				{#if d.targetType === "total"}
+					<span class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal text-muted">Everything you use, together</span>
+				{:else if d.targetType === "app"}
 					<select class="rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal" bind:value={d.target}>
 						{#each store.apps as a (a.appId)}<option value={a.appId}>{appLabel(a.appId, a.name)}</option>{/each}
 					</select>

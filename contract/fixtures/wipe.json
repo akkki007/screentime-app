@@ -117,7 +117,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "22:00",
             "downtimeEnd": "07:00",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]
@@ -231,7 +239,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "22:00",
             "downtimeEnd": "07:00",
-            "onboardingDone": false
+            "onboardingDone": false,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]

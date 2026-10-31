@@ -1,3 +1,5 @@
+//go:build linux
+
 package focus
 
 import (
@@ -17,6 +19,8 @@ type fakeCompositor struct {
 	// requested gets (notification id, timeout) once the client asks.
 	requested chan [2]uint32
 	conns     chan *wlConn
+	// managers gets the ID the client gave zwlr_foreign_toplevel_manager_v1.
+	managers chan uint32
 }
 
 func newFakeCompositor(t *testing.T, globals ...string) *fakeCompositor {
@@ -26,7 +30,8 @@ func newFakeCompositor(t *testing.T, globals ...string) *fakeCompositor {
 		socket:    filepath.Join(t.TempDir(), "wayland-test"),
 		globals:   globals,
 		requested: make(chan [2]uint32, 1),
-		conns:     make(chan *wlConn, 1),
+		conns:     make(chan *wlConn, 8),
+		managers:  make(chan uint32, 8),
 	}
 	l, err := net.Listen("unix", f.socket)
 	if err != nil {
@@ -67,8 +72,11 @@ func (f *fakeCompositor) serve(w *wlConn) {
 			w.send(args[0].(uint32), evCallbackDone, uint32(0))
 		case object == registry && opcode == opRegistryBind:
 			args, _ := wlArgs(body, "usuu")
-			if args[1] == "ext_idle_notifier_v1" {
+			switch args[1] {
+			case "ext_idle_notifier_v1":
 				notifier = args[3].(uint32)
+			case wlrManagerInterface:
+				f.managers <- args[3].(uint32)
 			}
 		case object == notifier && opcode == opNotifierGetIdleNotification:
 			args, _ := wlArgs(body, "uuu")

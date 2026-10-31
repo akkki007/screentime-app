@@ -9,7 +9,7 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun test frontend packages extensions",
+    "test": "bun test frontend packages extensions adapters",
     "test:contract": "go build -o bin/screentimed ./cmd/screentimed && bun test contract",
     "dev:daemon": "go run ./cmd/screentimed",
     "build:frontend": "bun run --cwd frontend build",

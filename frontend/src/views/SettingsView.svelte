@@ -4,6 +4,7 @@ import Button from '../components/Button.svelte';
 import Card from '../components/Card.svelte';
 import Icon from '../components/Icon.svelte';
 import Modal from '../components/Modal.svelte';
+import PlannerSlot from '../components/PlannerSlot.svelte';
 import SettingRow from '../components/SettingRow.svelte';
 import Toggle from '../components/Toggle.svelte';
 import { daemon, getBridge } from '../lib/api';
@@ -56,6 +57,9 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 					{#each IDLE_OPTIONS as m}<option value={m}>{m} minute{m === 1 ? "" : "s"}</option>{/each}
 				</select>
 			</SettingRow>
+			<SettingRow title="Show the notch" description="A small black pill at the top of the screen with today's total. It shows your focus timer and speaks up at a limit or a reminder. Click it for today's top apps.">
+				<Toggle label="Show the notch" checked={settings.notchEnabled} onchange={(v) => save({ notchEnabled: v })} />
+			</SettingRow>
 		</Card>
 
 		<Card title="Privacy">
@@ -68,10 +72,24 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 			<div class="mt-4 flex items-start gap-3 rounded-xl bg-accent-soft p-3 text-[13px]">
 				<span class="mt-0.5 text-accent"><Icon name="shield" size={16} /></span>
 				<p>
-					Screentime never connects to the internet. Your data lives in <code class="rounded bg-surface px-1">~/.local/share/screentime</code> and
+					Screentime never connects to the internet unless you turn on the optional planner with your own API key. Your data lives in <code class="rounded bg-surface px-1">~/.local/share/screentime</code> and
 					is only ever read by this app.
 				</p>
 			</div>
+		</Card>
+
+		<Card title="Planner (optional)">
+			<SettingRow
+				title="Daily planner and smarter categories"
+				description="Optional and off by default. A small AI model plans your day and sorts uncategorized apps. It needs a model file you download yourself or your own API key. Switching it on or off restarts the tracker once, to grant or remove its network access."
+			>
+				<Toggle
+					label="Daily planner and smarter categories"
+					checked={(settings as { plannerEnabled?: boolean }).plannerEnabled === true}
+					onchange={(v) => save({ plannerEnabled: v } as Partial<Settings>)}
+				/>
+			</SettingRow>
+			<PlannerSlot load={() => import("../components/PlannerSettings.svelte")} />
 		</Card>
 	{/if}
 

@@ -1,0 +1,836 @@
+{
+  "formatShort": [
+    [0, "0m"],
+    [1, "<1m"],
+    [29999, "<1m"],
+    [30000, "1m"],
+    [89999, "1m"],
+    [90000, "2m"],
+    [2700000, "45m"],
+    [10800000, "3h"],
+    [11820000, "3h 17m"]
+  ],
+  "countdown": [
+    [0, "00:00"],
+    [-5, "00:00"],
+    [1, "00:01"],
+    [1000, "00:01"],
+    [1001, "00:02"],
+    [59000, "00:59"],
+    [3599999, "1:00:00"],
+    [3600000, "1:00:00"],
+    [3661000, "1:01:01"]
+  ],
+  "cases": [
+    {
+      "name": "starts offline, then shows today's total",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "offline",
+            "icon": "offline",
+            "text": "Screentime is not running",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600000,
+          "connected": true
+        },
+        {
+          "at": 1793262600000,
+          "today": [
+            {
+              "appId": "brave_brave",
+              "name": "Brave",
+              "ms": 6720000
+            },
+            {
+              "appId": "com.anthropic.Claude",
+              "name": "Claude",
+              "ms": 1860000
+            },
+            {
+              "appId": "dev.zed.Zed",
+              "name": "Zed",
+              "ms": 1440000
+            },
+            {
+              "appId": "org.gnome.Ptyxis",
+              "name": "",
+              "ms": 1080000
+            },
+            {
+              "appId": "org.gnome.Nautilus",
+              "name": "Files",
+              "ms": 240000
+            }
+          ]
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "3h 9m",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expectPanel": {
+            "total": "3h 9m",
+            "paused": false,
+            "focus": false,
+            "apps": [
+              {
+                "name": "Brave",
+                "time": "1h 52m",
+                "percent": 59
+              },
+              {
+                "name": "Claude",
+                "time": "31m",
+                "percent": 16
+              },
+              {
+                "name": "Zed",
+                "time": "24m",
+                "percent": 13
+              },
+              {
+                "name": "org.gnome.Ptyxis",
+                "time": "18m",
+                "percent": 10
+              }
+            ]
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expectNext": 0
+        }
+      ]
+    },
+    {
+      "name": "greets at the first activity of each local day, once",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600500,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262601000,
+          "expect": {
+            "kind": "greeting",
+            "icon": "wave",
+            "text": "Good afternoon, Alex!",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262601000,
+          "expectNext": 1793262605500
+        },
+        {
+          "at": 1793262605500,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262660000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262661000,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793349000000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793349000010,
+          "expect": {
+            "kind": "greeting",
+            "icon": "wave",
+            "text": "Good afternoon, Alex!",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "no greeting while idle or paused",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": true,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600001,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600002,
+          "status": {
+            "paused": true,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600003,
+          "expect": {
+            "kind": "paused",
+            "icon": "pause",
+            "text": "Paused",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "greeting by part of the day, with and without a name",
+      "opts": {
+        "userName": "",
+        "tzOffsetMin": 0
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "a",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "greeting",
+            "icon": "wave",
+            "text": "Good morning!",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "afternoon starts at noon",
+      "opts": {
+        "userName": "Sam",
+        "tzOffsetMin": 0
+      },
+      "steps": [
+        {
+          "at": 1793275200000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "a",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793275200000,
+          "expect": {
+            "kind": "greeting",
+            "icon": "wave",
+            "text": "Good afternoon, Sam!",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "evening starts at six",
+      "opts": {
+        "userName": "Sam Lee",
+        "tzOffsetMin": 0
+      },
+      "steps": [
+        {
+          "at": 1793296800000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "a",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793296800000,
+          "expect": {
+            "kind": "greeting",
+            "icon": "wave",
+            "text": "Good evening, Sam!",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "focus mode counts down and wakes once a second",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1793264053000
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "focus",
+            "icon": "timer",
+            "text": "24:13",
+            "detail": "Focus",
+            "countdownTo": 1793264053000
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expectNext": 1793262601000
+        },
+        {
+          "at": 1793262600500,
+          "expect": {
+            "kind": "focus",
+            "icon": "timer",
+            "text": "24:13",
+            "detail": "Focus",
+            "countdownTo": 1793264053000
+          }
+        },
+        {
+          "at": 1793262600500,
+          "expectNext": 1793262601000
+        },
+        {
+          "at": 1793262601000,
+          "expect": {
+            "kind": "focus",
+            "icon": "timer",
+            "text": "24:12",
+            "detail": "Focus",
+            "countdownTo": 1793264053000
+          }
+        },
+        {
+          "at": 1793264053000,
+          "expect": {
+            "kind": "focus",
+            "icon": "timer",
+            "text": "00:00",
+            "detail": "Focus",
+            "countdownTo": 1793264053000
+          }
+        },
+        {
+          "at": 1793264053000,
+          "expectNext": 0
+        },
+        {
+          "at": 1793264053001,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793264053002,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a focus session over an hour",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1793266500000
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "focus",
+            "icon": "timer",
+            "text": "1:05:00",
+            "detail": "Focus",
+            "countdownTo": 1793266500000
+          }
+        }
+      ]
+    },
+    {
+      "name": "paused, with and without a resume time",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": true,
+            "resumeAt": 1793264100000,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "paused",
+            "icon": "pause",
+            "text": "Paused",
+            "detail": "until 14:25",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600001,
+          "status": {
+            "paused": true,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262600001,
+          "expect": {
+            "kind": "paused",
+            "icon": "pause",
+            "text": "Paused",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a limit outranks a reminder, which is dropped, not queued",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "connected": true
+        },
+        {
+          "at": 1793262600000,
+          "limitHit": {
+            "target": "Brave",
+            "dailyMs": 5400000
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "alert",
+            "icon": "limit",
+            "text": "Daily limit reached",
+            "detail": "Brave · 1h 30m",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262601000,
+          "reminder": {
+            "kind": "break",
+            "message": "Time for a break."
+          }
+        },
+        {
+          "at": 1793262602000,
+          "expect": {
+            "kind": "alert",
+            "icon": "limit",
+            "text": "Daily limit reached",
+            "detail": "Brave · 1h 30m",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262602000,
+          "expectNext": 1793262606000
+        },
+        {
+          "at": 1793262606000,
+          "expect": {
+            "kind": "idle",
+            "icon": "clock",
+            "text": "0m",
+            "detail": "",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a newer reminder replaces an older one",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "connected": true
+        },
+        {
+          "at": 1793262600000,
+          "reminder": {
+            "kind": "break",
+            "message": "Time for a break."
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "reminder",
+            "icon": "break",
+            "text": "Time for a break",
+            "detail": "Time for a break.",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262602000,
+          "reminder": {
+            "kind": "downtime",
+            "message": "Downtime has started."
+          }
+        },
+        {
+          "at": 1793262603000,
+          "expect": {
+            "kind": "reminder",
+            "icon": "moon",
+            "text": "Downtime",
+            "detail": "Downtime has started.",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262603000,
+          "expectNext": 1793262608000
+        }
+      ]
+    },
+    {
+      "name": "reminder kinds, and long messages are clipped",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "connected": true
+        },
+        {
+          "at": 1793262600000,
+          "reminder": {
+            "kind": "focus",
+            "message": "Brave is distracting. Focus mode is on."
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "reminder",
+            "icon": "bolt",
+            "text": "Stay focused",
+            "detail": "Brave is distracting. Focus mode is on.",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600001,
+          "reminder": {
+            "kind": "break",
+            "message": "You have been active for 90 minutes without a break. Stand up and stretch for five minutes."
+          }
+        },
+        {
+          "at": 1793262600001,
+          "expect": {
+            "kind": "reminder",
+            "icon": "break",
+            "text": "Time for a break",
+            "detail": "You have been active for 90 minutes without a break. Stand…",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a limit outranks the greeting",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": "dev.zed.Zed",
+            "since": null,
+            "focusMode": {
+              "active": false,
+              "until": null
+            }
+          }
+        },
+        {
+          "at": 1793262601000,
+          "limitHit": {
+            "target": "Social",
+            "dailyMs": 2700000
+          }
+        },
+        {
+          "at": 1793262601500,
+          "expect": {
+            "kind": "alert",
+            "icon": "limit",
+            "text": "Daily limit reached",
+            "detail": "Social · 45m",
+            "countdownTo": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "losing the daemon shows offline and forgets its status",
+      "opts": {
+        "userName": "Alex Rivera",
+        "tzOffsetMin": 330
+      },
+      "steps": [
+        {
+          "at": 1793262600000,
+          "status": {
+            "paused": false,
+            "resumeAt": null,
+            "idle": false,
+            "currentAppId": null,
+            "since": null,
+            "focusMode": {
+              "active": true,
+              "until": 1793263200000
+            }
+          }
+        },
+        {
+          "at": 1793262600000,
+          "connected": false
+        },
+        {
+          "at": 1793262600000,
+          "expect": {
+            "kind": "offline",
+            "icon": "offline",
+            "text": "Screentime is not running",
+            "detail": "",
+            "countdownTo": null
+          }
+        },
+        {
+          "at": 1793262600000,
+          "expectNext": 0
+        },
+        {
+          "at": 1793262600000,
+          "expectPanel": {
+            "total": "0m",
+            "paused": false,
+            "focus": false,
+            "apps": []
+          }
+        }
+      ]
+    }
+  ]
+}

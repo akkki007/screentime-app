@@ -12,5 +12,7 @@ test('Icon component defines globe icon', () => {
 test('LimitsView renders globe icon for domain limits', () => {
   const limitsViewPath = path.join(__dirname, '../views/LimitsView.svelte');
   const content = readFileSync(limitsViewPath, 'utf8');
-  expect(content).toContain('limit.targetType === "category" ? "apps" : "globe"');
+  expect(content).toContain(
+    'limit.targetType === "category" || limit.targetType === "total" ? "apps" : "globe"',
+  );
 });

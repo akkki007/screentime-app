@@ -38,6 +38,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -101,6 +102,7 @@ func run(startHidden bool) error {
 		ui        = &uiState{names: map[string]string{}}
 		conn      *shell.Conn
 		refreshUI func()
+		notch     atomic.Pointer[notchUI]
 	)
 	win := &shell.Windows{
 		Exe:  exe,
@@ -165,6 +167,9 @@ func run(startHidden bool) error {
 		OnShutdown: func() {
 			win.CloseAll()
 			conn.Stop()
+			if n := notch.Load(); n != nil {
+				n.Stop()
+			}
 		},
 	})
 	quitOnSignal(app)
@@ -209,6 +214,8 @@ func run(startHidden bool) error {
 	refreshUI()
 	conn.Start()
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		// The notch (ADR 14) is native GTK in this process; GNOME draws its own.
+		notch.Store(startNotch(openMain))
 		if !startHidden || !trayHost {
 			openMain()
 		}

@@ -18,6 +18,10 @@ var daemonMethods = map[string]bool{
 	"tracker.pause": true, "tracker.resume": true, "tracker.status": true,
 	"focus.start": true, "focus.stop": true,
 	"data.export": true, "data.wipe": true,
+	// The optional planner (ADR 8). The daemon answers "planner is off" to
+	// the two that need it while it is.
+	"planner.status": true, "planner.setKey": true, "planner.stop": true,
+	"planner.suggest": true, "planner.categorize": true,
 }
 
 // Bridge is the Go side of the webview's bridge. Its methods are bound to

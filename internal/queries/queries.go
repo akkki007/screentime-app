@@ -1,5 +1,5 @@
-// Package queries answers the read and write RPCs over the database. Port
-// of apps/daemon/src/queries.ts; contract/ fixtures pin the results.
+// Package queries answers the read and write RPCs over the database. The
+// contract/ fixtures pin the results.
 package queries
 
 import (
@@ -154,6 +154,10 @@ func UsageFor(db *sql.DB, targetType, target string, from, to int64) (int64, err
 	case "domain":
 		q = `SELECT SUM(` + clipped + `) FROM web_sessions
 			WHERE end_ts > :from AND start_ts < :to AND domain = :target`
+	case "total":
+		// One limit on everything: the target is only a name ("all").
+		q = `SELECT SUM(` + clipped + `) FROM sessions
+			WHERE end_ts > :from AND start_ts < :to AND :target != ''`
 	case "app":
 		q = `SELECT SUM(` + clipped + `) FROM sessions
 			JOIN apps ON apps.id = sessions.app_id
@@ -215,7 +219,7 @@ func SetAppCategory(db *sql.DB, appID string, categoryID *int64) (bool, error) {
 			return false, err
 		}
 	}
-	res, err := db.Exec("UPDATE apps SET category_id = ? WHERE app_id = ?", categoryID, appID)
+	res, err := db.Exec("UPDATE apps SET category_id = ?, category_source = 'user' WHERE app_id = ?", categoryID, appID)
 	if err != nil {
 		return false, err
 	}

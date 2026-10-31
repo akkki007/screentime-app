@@ -121,7 +121,7 @@ What is done and what only a person on a real desktop can finish. Everything bel
 | 4 | `screentimed native-host`, S3 (`rpc.Dial`: ownership of the socket and its directory, then `SO_PEERCRED`), installer, `.deb` manifest. Tested end to end through a pipe into a running daemon. | Firefox and Chromium with the extension loaded, on a machine without Bun. |
 | 5 | Bun daemon, `packages/db` and the extension's legacy broadcast mode removed; migrations live in `internal/store/migrations`; unit, `.deb`, CI and docs updated; ADR 6 superseded. The contract fixtures pass against `screentimed` with no Bun daemon in the repo. | `dpkg -i` on a real machine. |
 | 6 | Wails v3 shell ([ADR 9](adr/0009-wails-v3-ui-shell.md)): dashboard, quick panel, tray menu, S3/S4/S5, minimum window size, single instance. | Tray clicks, panel position and transparency on GNOME with the AppIndicator extension. |
-| 7 | KDE Wayland adapter ([ADR 11](adr/0011-kde-wayland-adapter.md)): KWin script, `kde-wayland` provider, idle over `ext-idle-notify-v1` (checked against headless sway). Planner, Windows and macOS not started. | The Plasma checklist in ADR 11; anything needing macOS or Windows. |
+| 7 | KDE Wayland adapter ([ADR 11](adr/0011-kde-wayland-adapter.md)): KWin script, `kde-wayland` provider, idle over `ext-idle-notify-v1` (checked against headless sway). Planner not started. Windows and macOS daemon providers: [ADR 13](adr/0013-windows-and-macos-providers.md). | The Plasma checklist in ADR 11; anything needing macOS or Windows. |
 
 **Measured in the sandbox** (so ceilings or floors, not session numbers): `screentimed` idles at **10 MB** RSS (budget 60 MB; was 43 MB under Bun). The app holds **75 MB** PSS with only the tray, **~500 MB** with the dashboard open under software rendering (a bare Wails window is ~290 MB; the rest is WebKitGTK), and ~150 MB after the window is closed. The `.deb` is **6.7 MB** (19 MB installed), down from 30 MB (86 MB).
 
@@ -140,7 +140,8 @@ What is done and what only a person on a real desktop can finish. Everything bel
 - An open window costs what WebKitGTK costs. The page is already plain (no blur, backdrop filters or animations; ~220 KB of script).
 - `scripts/soak -verify-only` over the day's data: 159 sessions, 0 faults (no overlaps or inverted sessions). The one long gap (7 h 31 m) matches the machine being suspended.
 - The tray item registers with the AppIndicator watcher; the native host runs and exits cleanly with no Bun on `PATH`; the dashboard maps in ~0.3 s.
-- Not yet measured: the 24 h reading of `screentimed`'s RSS (the soak is the way), and clicks on the tray menu and quick panel position on GNOME, which a person has to do.
+- **Soak** (`scripts/soak -for 24h -every 5m`, started 2026-10-10 20:42, on the same session): 146 RSS samples, **5.5 to 15.4 MB (mean 10.8, last 10.4)**, no growth. The run was cut off by a reboot before its summary, so the totals come from `-verify-only -since` over the database: **4,707 sessions, 72 h 26 m tracked, 0 faults** (no overlapping or inverted sessions) across 130 gaps, which line up with suspends, locks and idle periods, with the daemon restarted several times in between.
+- Not yet measured: clicks on the tray menu and the quick panel's position on GNOME, which a person has to do.
 
 #### Runbook for the on-hardware checks (issues #24, #25, #27, and #3)
 
@@ -186,7 +187,7 @@ These come from the security review of the TypeScript code (issues #3–#7). Iss
 - [x] Wails v2 or v3: **v3** (beta.28, `-tags gtk3`, pinned); see [ADR 9](adr/0009-wails-v3-ui-shell.md)
 - [x] ~~Generate Go types from `contract/schema/rpc.schema.json`, or write them by hand?~~ By hand: the contract fixtures check every field, and generated code from Zod's JSON Schema is awkward Go.
 - [ ] Should `architecture.md` and ADR 2 be updated in the same PR as the decision, or once the Go daemon reaches parity?
-- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.2` pinned in `go.mod`. CI reads both from there.
+- [x] ~~Minimum Go version~~ `go 1.26.0` (the oldest supported release when step 2 started), with `toolchain go1.27.3` pinned in `go.mod`. CI reads both from there.
 
 ## Next step
 

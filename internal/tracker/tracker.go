@@ -1,6 +1,5 @@
 // Package tracker turns focus and idle changes into `sessions` rows, and
-// browser reports into `web_sessions`. Port of apps/daemon/src/tracker.ts
-// and web-tracker.ts.
+// browser reports into `web_sessions`.
 //
 // Neither type is safe for concurrent use: the daemon serialises every call
 // (provider callbacks, the heartbeat and RPC handlers) behind one lock, as

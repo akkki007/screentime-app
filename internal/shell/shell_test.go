@@ -3,8 +3,10 @@ package shell
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -362,6 +364,43 @@ func TestShortDuration(t *testing.T) {
 	for ms, want := range map[int64]string{0: "0m", 29_000: "0m", 90_000: "2m", 3_600_000: "1h 00m", 17_220_000: "4h 47m"} {
 		if got := ShortDuration(ms); got != want {
 			t.Errorf("ShortDuration(%d) = %s, want %s", ms, got, want)
+		}
+	}
+}
+
+// Every daemon method the UI calls must be on the allow-list. The list is the
+// only thing between the webview and the daemon, so a method added to the UI
+// without it fails in the real app, where no mock is in the way.
+func TestAllowListCoversWhatTheUICalls(t *testing.T) {
+	call := regexp.MustCompile(`\b(?:daemon|call|attempt)\(\s*(?:'|")([a-z]+\.[A-Za-z]+)(?:'|")`)
+	seen := map[string]bool{}
+	err := filepath.WalkDir("../../frontend/src", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		name := d.Name()
+		if strings.HasSuffix(name, ".test.ts") || name == "mock.ts" ||
+			!(strings.HasSuffix(name, ".ts") || strings.HasSuffix(name, ".svelte")) {
+			return nil
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, m := range call.FindAllStringSubmatch(string(src), -1) {
+			seen[m[1]] = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) < 10 {
+		t.Fatalf("found only %d method names in the frontend; has the call syntax changed?", len(seen))
+	}
+	for method := range seen {
+		if !daemonMethods[method] {
+			t.Errorf("the UI calls %q, which the bridge refuses", method)
 		}
 	}
 }

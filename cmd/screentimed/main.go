@@ -1,10 +1,12 @@
 // Command screentimed is the tracker daemon: it records which app is in
 // focus, enforces the wellbeing rules and serves the UI over JSON-RPC on
-// $XDG_RUNTIME_DIR/screentime/daemon.sock.
+// $XDG_RUNTIME_DIR/screentime/daemon.sock (Linux; see rpc.SocketPath for
+// Windows and macOS). The focus providers per OS are in providers_*.go.
 //
 // Environment:
 //
-//	SCREENTIME_FOCUS_PROVIDER  force a focus adapter by id ("none" reports nothing)
+//	SCREENTIME_FOCUS_PROVIDER  force a focus adapter by id: gnome-wayland, kde-wayland,
+//	                           wlroots, x11 ("none" reports nothing)
 //	SCREENTIME_DEBUG=1         log focus changes and browser reports
 //	SCREENTIME_FAKE_NOW        test hook: freeze the clock at this Unix ms
 //	                           (used by the contract fixtures in contract/)
@@ -19,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -26,8 +29,9 @@ import (
 	"github.com/akkki007/screentime-app/internal/apps"
 	"github.com/akkki007/screentime-app/internal/daemon"
 	"github.com/akkki007/screentime-app/internal/focus"
-	"github.com/akkki007/screentime-app/internal/notify"
+	"github.com/akkki007/screentime-app/internal/planner"
 	"github.com/akkki007/screentime-app/internal/rpc"
+	"github.com/akkki007/screentime-app/internal/sandbox"
 	"github.com/akkki007/screentime-app/internal/store"
 )
 
@@ -40,7 +44,7 @@ func main() {
 		}
 		return
 	}
-	if err := run(); err != nil {
+	if err := runOnMainThread(run); err != nil {
 		log.Printf("[daemon] fatal error: %v", err)
 		os.Exit(1)
 	}
@@ -61,7 +65,7 @@ func clock() (func() int64, error) {
 
 func run() error {
 	// Everything the daemon creates is private to the user (S1).
-	syscall.Umask(0o077)
+	restrictUmask()
 
 	now, err := clock()
 	if err != nil {
@@ -78,12 +82,8 @@ func run() error {
 	}
 	defer db.Close()
 
-	dirs := apps.ApplicationDirs()
-	candidates := []focus.Provider{
-		&focus.Gnome{Now: now},
-		&focus.KDE{Now: now},
-		&focus.X11{Now: now, Index: func() map[string]string { return apps.WMClassIndex(dirs) }},
-	}
+	dirs := appDirs()
+	candidates := focusCandidates(now, dirs)
 	provider, err := focus.Select(context.Background(), os.Getenv("SCREENTIME_FOCUS_PROVIDER"), candidates)
 	if err != nil {
 		return err
@@ -93,10 +93,14 @@ func run() error {
 	d, err := daemon.New(daemon.Config{
 		DB:       db,
 		Provider: provider,
-		Notifier: &notify.DBus{},
+		Notifier: newNotifier(),
 		Now:      now,
 		Lookup:   apps.DirLookup(dirs),
 		Debug:    os.Getenv("SCREENTIME_DEBUG") == "1",
+		// Used only once the optional planner is switched on.
+		PlannerKeyPath: planner.KeyPath(filepath.Dir(store.DefaultPath())),
+		PlannerRunDir:  filepath.Dir(sock),
+		Unit:           sandbox.Detect(),
 	})
 	if err != nil {
 		return err

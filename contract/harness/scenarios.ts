@@ -7,7 +7,7 @@
  */
 import type { FixtureEnv, Message } from './daemon';
 
-export const NOW = 1790762400000;
+const NOW = 1790762400000;
 export const ENV: FixtureEnv = { now: NOW, tz: 'Asia/Kolkata', seed: 'seed.sql' };
 
 const MIN = 60_000;
@@ -15,7 +15,7 @@ const DAY = 24 * 60 * MIN;
 /** Local midnight starting Sep 30 (today) in Asia/Kolkata. */
 const TODAY = 1790706600000;
 
-export type Step = Message | string;
+type Step = Message | string;
 export type Scenario = { name: string; description: string; steps: Step[] };
 
 /** Builds requests with ids counting up from 1 within one scenario. */
@@ -222,6 +222,39 @@ export const SCENARIOS: Scenario[] = [
     call('apps.list'),
     call('categories.list'),
   ]),
+
+  scenario(
+    'planner',
+    'The optional planner is off by default and its params are validated',
+    ({ call }) => [
+      call('planner.status'),
+      call('planner.suggest', {}),
+      call('planner.suggest'),
+      call('planner.suggest', { goal: 'x'.repeat(501) }),
+      call('planner.suggest', { goal: 'ok', other: 1 }),
+      call('planner.categorize'),
+      call('planner.categorize', {}),
+      call('planner.categorize', { appIds: [''] }),
+      call('planner.categorize', { appIds: 'code' }),
+      call('planner.setKey', {}),
+      call('planner.setKey', { key: 'has space' }),
+      call('planner.setKey', { key: 'k'.repeat(513) }),
+      call('planner.stop'),
+      call('planner.stop', {}),
+      // A provider can be configured without switching the planner on.
+      call('settings.set', {
+        plannerProvider: 'remote',
+        plannerEndpoint: 'https://api.example.com/v1',
+        plannerModel: 'm',
+      }),
+      call('planner.status'),
+      call('settings.set', { plannerProvider: 'cloud' }),
+      call('settings.set', { plannerEndpoint: 'ftp://x' }),
+      call('settings.set', { plannerIdleMinutes: 0 }),
+      call('settings.set', { plannerIdleMinutes: 61 }),
+      call('planner.setKey', { key: '' }),
+    ],
+  ),
 
   scenario('browser', 'Messages from the browser native host get no reply', ({ call, notify }) => [
     notify('browser.activeTab', { domain: 'example.com', active: true }),

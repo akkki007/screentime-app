@@ -192,7 +192,7 @@
           "id": 9,
           "error": {
             "code": -32603,
-            "message": "targetType: Invalid enum value. Expected 'app' | 'category' | 'domain', received 'website'"
+            "message": "targetType: Invalid enum value. Expected 'app' | 'category' | 'domain' | 'total', received 'website'"
           }
         }
       ]
@@ -556,7 +556,15 @@
             "downtimeEnabled": false,
             "downtimeStart": "22:00",
             "downtimeEnd": "07:00",
-            "onboardingDone": true
+            "onboardingDone": true,
+            "notchEnabled": false,
+            "plannerEnabled": false,
+            "plannerProvider": "local",
+            "plannerEndpoint": "",
+            "plannerModel": "",
+            "plannerServerPath": "",
+            "plannerModelPath": "",
+            "plannerIdleMinutes": 5
           }
         }
       ]

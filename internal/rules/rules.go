@@ -1,5 +1,5 @@
 // Package rules is the wellbeing engine: daily limits, break reminders,
-// downtime and focus mode. Port of apps/daemon/src/rules.ts.
+// downtime and focus mode.
 //
 // Everything is derived from the database and the clock on each Tick rather
 // than from timers, so a suspend can't make a limit miss or double-fire:
@@ -168,6 +168,9 @@ func (e *Engine) isInUse(l ipc.Limit) bool {
 	if current == "" {
 		return false
 	}
+	if l.TargetType == "total" {
+		return true // anything in use counts toward it
+	}
 	if l.TargetType == "app" {
 		return current == l.Target
 	}
@@ -292,8 +295,11 @@ func (e *Engine) appName(appID string) string {
 }
 
 func (e *Engine) displayName(l ipc.Limit) string {
-	if l.TargetType == "app" {
+	switch l.TargetType {
+	case "app":
 		return e.appName(l.Target)
+	case "total":
+		return "All apps"
 	}
 	return l.Target
 }
