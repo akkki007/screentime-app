@@ -111,10 +111,10 @@ function changeType(type: Limit['targetType']) {
     type === 'total'
       ? 'all'
       : type === 'app'
-      ? (store.apps[0]?.appId ?? '')
-      : type === 'category'
-        ? (store.categories[0]?.name ?? '')
-        : '';
+        ? (store.apps[0]?.appId ?? '')
+        : type === 'category'
+          ? (store.categories[0]?.name ?? '')
+          : '';
 }
 
 /** "https://www.YouTube.com/watch?v=1" -> "www.youtube.com" */

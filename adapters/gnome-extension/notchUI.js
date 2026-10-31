@@ -572,7 +572,12 @@ export class Notch {
   }
 
   _applySettings(s) {
-    if (s && typeof s.notchEnabled === 'boolean') this._enabled = s.notchEnabled;
+    if (s && typeof s.notchEnabled === 'boolean') {
+      this._enabled = s.notchEnabled;
+      // Turned off: forget that it was ever shown, so nothing of it comes back
+      // (not even "not running") until it is turned on again.
+      if (!this._enabled) this._shown = false;
+    }
   }
 
   async _loadNames() {
