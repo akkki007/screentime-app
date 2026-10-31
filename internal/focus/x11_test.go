@@ -4,6 +4,7 @@ package focus
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/jezek/xgb"
@@ -43,7 +44,29 @@ func testDisplay(t *testing.T) string {
 	if d == "" {
 		t.Skip("set SCREENTIME_TEST_X_DISPLAY to a private X server (never your desktop's)")
 	}
+	keepServerAlive(t, d)
 	return d
+}
+
+var keeper struct {
+	sync.Once
+	conn *xgb.Conn
+}
+
+// keepServerAlive holds one connection open until the test binary exits.
+// A server started without -noreset (as Xvfb is by default) resets itself
+// when its last client disconnects, and a test that connects while that
+// happens fails with "connection reset by peer"; it did, about one run in
+// four, whichever test came after another one had finished.
+func keepServerAlive(t *testing.T, display string) {
+	t.Helper()
+	keeper.Do(func() {
+		conn, err := xgb.NewConnDisplay(display)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keeper.conn = conn // closed by the process exiting
+	})
 }
 
 type wm struct {

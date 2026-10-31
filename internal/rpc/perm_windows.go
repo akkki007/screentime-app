@@ -5,6 +5,7 @@ package rpc
 import (
 	"net"
 	"os"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -26,10 +27,13 @@ import (
 //     file is what remains.
 //
 // An elevated process creates files owned by the Administrators group rather
-// than the user, so a daemon started from an elevated shell would fail the
-// check; it is meant to run as the logged-in user.
+// than the user (the token's default owner), so "owned by me" accepts either
+// the user or the owner the token gives new objects. Without that a daemon
+// started from an elevated shell, or by a user whose account policy makes
+// Administrators the default owner, would refuse its own directory.
 
-// ownedByMe reports whether the owner of path is the current user.
+// ownedByMe reports whether the owner of path is the current user, or the
+// owner this process's new files get.
 func ownedByMe(path string, _ os.FileInfo) bool {
 	sd, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
 	if err != nil {
@@ -39,12 +43,30 @@ func ownedByMe(path string, _ os.FileInfo) bool {
 	if err != nil || owner == nil {
 		return false
 	}
-	user, err := windows.GetCurrentProcessToken().GetTokenUser()
-	if err != nil {
-		return false
+	token := windows.GetCurrentProcessToken()
+	if user, err := token.GetTokenUser(); err == nil && owner.Equals(user.User.Sid) {
+		return true
 	}
-	return owner.Equals(user.User.Sid)
+	def, err := defaultOwner(token)
+	return err == nil && owner.Equals(def)
 }
+
+// defaultOwner is the SID the token gives to objects it creates (TokenOwner).
+func defaultOwner(token windows.Token) (*windows.SID, error) {
+	var n uint32
+	err := windows.GetTokenInformation(token, windows.TokenOwner, nil, 0, &n)
+	if err != windows.ERROR_INSUFFICIENT_BUFFER {
+		return nil, err
+	}
+	buf := make([]byte, n)
+	if err := windows.GetTokenInformation(token, windows.TokenOwner, &buf[0], n, &n); err != nil {
+		return nil, err
+	}
+	// A TOKEN_OWNER is a struct holding one SID pointer, into buf.
+	return (*tokenOwner)(unsafe.Pointer(&buf[0])).owner, nil
+}
+
+type tokenOwner struct{ owner *windows.SID }
 
 // tightenDir does nothing: Windows reports synthetic mode bits, and the
 // directory's ACL is inherited from %LOCALAPPDATA%.

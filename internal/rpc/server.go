@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -128,6 +129,9 @@ func (c *client) close() { c.once.Do(func() { c.conn.Close(); close(c.out) }) }
 // Listen binds the socket at path. The caller checks IsLive first: a second
 // daemon would steal the first one's socket and double count everything.
 func Listen(path string, handler Handler) (*Server, error) {
+	if err := checkPathLength(path); err != nil {
+		return nil, err
+	}
 	if err := prepareDir(filepath.Dir(path)); err != nil {
 		return nil, err
 	}
@@ -337,4 +341,24 @@ func versionParam(params json.RawMessage) string {
 		return s
 	}
 	return string(raw)
+}
+
+// maxSocketPath is what fits in a sockaddr_un: 104 bytes on macOS, 108 on
+// Linux and Windows, each including a terminating NUL.
+func maxSocketPath() int {
+	if runtime.GOOS == "darwin" {
+		return 103
+	}
+	return 107
+}
+
+// checkPathLength turns the kernel's "invalid argument" for a path that is too
+// long, which a long home directory name can cause on macOS, into something a
+// person can act on.
+func checkPathLength(path string) error {
+	if len(path) > maxSocketPath() {
+		return fmt.Errorf("the socket path is %d bytes, over the %d the system allows for a Unix socket: %s",
+			len(path), maxSocketPath(), path)
+	}
+	return nil
 }
