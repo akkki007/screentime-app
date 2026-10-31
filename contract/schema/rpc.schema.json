@@ -145,7 +145,8 @@
               "enum": [
                 "app",
                 "category",
-                "domain"
+                "domain",
+                "total"
               ]
             },
             "target": {
@@ -190,7 +191,8 @@
             "enum": [
               "app",
               "category",
-              "domain"
+              "domain",
+              "total"
             ]
           },
           "target": {
@@ -232,7 +234,8 @@
             "enum": [
               "app",
               "category",
-              "domain"
+              "domain",
+              "total"
             ]
           },
           "target": {

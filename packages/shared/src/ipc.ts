@@ -100,7 +100,7 @@ export const DataWipeRequestSchema = z.object({
   everything: z.boolean().default(false),
 });
 
-export const LimitTargetTypeSchema = z.enum(['app', 'category', 'domain']);
+export const LimitTargetTypeSchema = z.enum(['app', 'category', 'domain', 'total']);
 export const LimitActionSchema = z.enum(['notify', 'overlay', 'block']);
 
 export const LimitSchema = z.object({

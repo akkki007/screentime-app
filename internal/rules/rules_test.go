@@ -378,3 +378,25 @@ func TestFormatDuration(t *testing.T) {
 		}
 	}
 }
+
+// One limit on everything adds every app together, and says so by name.
+func TestTotalLimitCountsEveryAppTogether(t *testing.T) {
+	h := newHarness(t)
+	limit := h.setLimit(ipc.Limit{TargetType: "total", Target: "all", DailyMs: hour, Action: "notify"})
+	h.addSession("org.mozilla.firefox", h.start-30*minute, h.start)
+	h.addSession("org.gnome.Ptyxis", h.start-25*minute, h.start-5*minute)
+	h.engine.Tick()
+	h.wantHits(0) // 30 + 20 minutes: not yet
+
+	h.addSession("org.gnome.Nautilus", h.start, h.start+11*minute)
+	h.clock += 11 * minute
+	h.engine.Tick()
+	if want := []ipc.LimitHitEvent{{LimitID: *limit.ID, Action: "notify"}}; !reflect.DeepEqual(h.hits, want) {
+		t.Fatalf("hits = %v, want %v", h.hits, want)
+	}
+	if len(h.notes) != 1 || !strings.Contains(h.notes[0].body, "All apps") {
+		t.Fatalf("notes = %v, want one naming %q", h.notes, "All apps")
+	}
+	h.run(30 * minute)
+	h.wantHits(1)
+}

@@ -211,7 +211,7 @@ func ParseLimit(params json.RawMessage) (Limit, error) {
 	}
 	var l Limit
 	l.ID = o.OptInt("id", IntRule{})
-	l.TargetType, _ = o.Enum("targetType", "app", "category", "domain")
+	l.TargetType, _ = o.Enum("targetType", "app", "category", "domain", "total")
 	l.Target, _ = o.String("target")
 	l.DailyMs = o.Int("dailyMs", IntRule{Positive: true})
 	if s := o.OptString("schedule", 0, scheduleRe, "expected HH:MM-HH:MM"); s != nil {

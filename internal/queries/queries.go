@@ -154,6 +154,10 @@ func UsageFor(db *sql.DB, targetType, target string, from, to int64) (int64, err
 	case "domain":
 		q = `SELECT SUM(` + clipped + `) FROM web_sessions
 			WHERE end_ts > :from AND start_ts < :to AND domain = :target`
+	case "total":
+		// One limit on everything: the target is only a name ("all").
+		q = `SELECT SUM(` + clipped + `) FROM sessions
+			WHERE end_ts > :from AND start_ts < :to AND :target != ''`
 	case "app":
 		q = `SELECT SUM(` + clipped + `) FROM sessions
 			JOIN apps ON apps.id = sessions.app_id

@@ -192,7 +192,7 @@
           "id": 9,
           "error": {
             "code": -32603,
-            "message": "targetType: Invalid enum value. Expected 'app' | 'category' | 'domain', received 'website'"
+            "message": "targetType: Invalid enum value. Expected 'app' | 'category' | 'domain' | 'total', received 'website'"
           }
         }
       ]
