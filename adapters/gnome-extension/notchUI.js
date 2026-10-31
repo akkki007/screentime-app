@@ -176,7 +176,10 @@ export class Notch {
       userName: GLib.get_real_name() === 'Unknown' ? '' : GLib.get_real_name(),
       tzOffsetMin: -new Date().getTimezoneOffset(),
     });
-    this._enabled = true;
+    // Off until the tracker says otherwise: a notch the user turned off (or
+    // never turned on) must never flash at login or while the tracker is down.
+    this._enabled = false;
+    this._shown = false;
     this._limits = new Map();
     this._names = new Map();
     this._open = false;
@@ -340,7 +343,10 @@ export class Notch {
       this._redrawId = 0;
     }
     const now = Math.floor(this._now());
-    const visible = this._enabled || !this._client.connected;
+    // "Screentime is not running" only appears once the notch has been shown this
+    // session and the tracker then went away; a notch that is off stays gone.
+    this._shown = this._shown || (this._enabled && this._client.connected);
+    const visible = this._shown && (this._enabled || !this._client.connected);
     this._root.visible = visible;
     if (!visible) {
       this._close();

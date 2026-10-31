@@ -81,7 +81,8 @@ type Settings struct {
 	DowntimeStart         string `json:"downtimeStart"`
 	DowntimeEnd           string `json:"downtimeEnd"`
 	OnboardingDone        bool   `json:"onboardingDone"`
-	// NotchEnabled shows the notch at the top of the screen (ADR 14).
+	// NotchEnabled shows the notch at the top of the screen (ADR 14). Off by
+	// default: many people already have one.
 	NotchEnabled bool `json:"notchEnabled"`
 
 	// The optional planner (ADR 8). Off by default; the daemon does nothing
@@ -102,7 +103,6 @@ var DefaultSettings = Settings{
 	BreakLengthMinutes:   5,
 	DowntimeStart:        "22:00",
 	DowntimeEnd:          "07:00",
-	NotchEnabled:         true,
 	PlannerProvider:      "local",
 	PlannerIdleMinutes:   5,
 }
