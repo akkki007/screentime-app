@@ -587,3 +587,24 @@ func TestDaemonDoesNotLinkTLS(t *testing.T) {
 		}
 	}
 }
+
+// llama-server prints its banner first and why it gave up last; the error
+// shown to the user must be the reason, not a banner line.
+func TestCaptureKeepsTheReasonNotTheBanner(t *testing.T) {
+	c := &capture{on: true}
+	c.Write([]byte("build_info: b8681\nsystem_info: n_threads = 6\n"))
+	c.Write([]byte(strings.Repeat("loading tensor blah blah\n", 400)))
+	c.Write([]byte("gguf_init_from_file_ptr: invalid magic characters: 'WJ', expected 'GGUF'\n"))
+	c.Write([]byte("llama_model_load: error loading model: failed to load model from x.gguf\nllama_model_load_from_file_impl: shutting down\n"))
+	got := c.suffix()
+	if !strings.Contains(got, "invalid magic") {
+		t.Errorf("suffix = %q", got)
+	}
+	if len(c.buf) > maxCaptured {
+		t.Errorf("kept %d bytes, cap is %d", len(c.buf), maxCaptured)
+	}
+	c.stop()
+	if c.suffix() != "" {
+		t.Error("output kept after stop")
+	}
+}

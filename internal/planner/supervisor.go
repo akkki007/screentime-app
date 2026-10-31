@@ -411,7 +411,7 @@ func (s *Supervisor) start(ctx context.Context) (*child, error) {
 		"--n-gpu-layers", "0",
 	}
 	// Hardening flags only newer builds have; used when --help lists them.
-	for _, f := range []string{"--no-webui", "--offline", "--log-disable"} {
+	for _, f := range []string{"--no-webui", "--offline"} {
 		if strings.Contains(help, f) {
 			args = append(args, f)
 		}
@@ -549,8 +549,10 @@ func (l *limitedBuffer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// capture keeps the first bytes of the child's output while it loads, to
-// explain a failed start, and discards everything after stop.
+// capture keeps the last maxCaptured bytes of the child's output while it
+// loads, to explain a failed start, and discards everything after stop. The
+// tail is what matters: llama-server prints its banner first and the reason
+// it gave up last.
 type capture struct {
 	mu  sync.Mutex
 	on  bool
@@ -560,8 +562,11 @@ type capture struct {
 func (c *capture) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.on && len(c.buf) < maxCaptured {
-		c.buf = append(c.buf, p[:min(len(p), maxCaptured-len(c.buf))]...)
+	if c.on {
+		c.buf = append(c.buf, p...)
+		if over := len(c.buf) - maxCaptured; over > 0 {
+			c.buf = append(c.buf[:0], c.buf[over:]...)
+		}
 	}
 	return len(p), nil
 }
@@ -572,17 +577,36 @@ func (c *capture) stop() {
 	c.mu.Unlock()
 }
 
-// suffix is ": <last output line>" or "", for appending to an error.
+// suffix is ": <the line that says why>" or "", for appending to an error.
+// The most specific line wins ("invalid magic characters, expected GGUF"
+// over "exiting due to model loading error"); failing that the last line
+// that mentions an error, else the last line.
 func (c *capture) suffix() string {
 	c.mu.Lock()
 	text := string(c.buf)
 	c.mu.Unlock()
 	lines := strings.Split(strings.TrimSpace(text), "\n")
-	last := cleanText(lines[len(lines)-1], 200)
-	if last == "" {
+	pick := lines[len(lines)-1]
+	find := func(words ...string) bool {
+		for i := len(lines) - 1; i >= 0; i-- {
+			l := strings.ToLower(lines[i])
+			for _, w := range words {
+				if strings.Contains(l, w) {
+					pick = lines[i]
+					return true
+				}
+			}
+		}
+		return false
+	}
+	if !find("invalid", "unsupported", "not enough", "out of memory", "cannot", "no such file") {
+		find("error", "failed")
+	}
+	pick = cleanText(pick, 200)
+	if pick == "" {
 		return ""
 	}
-	return ": " + last
+	return ": " + pick
 }
 
 func randomKey() (string, error) {
