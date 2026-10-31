@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  How the island looks and behaves (prefs.js edits these; notchUI.js follows
+  them live). Whether the island is shown at all is the tracker's notchEnabled
+  setting, shared with the app and the other desktops' notch, not a key here.
+-->
+<schemalist>
+  <schema id="org.gnome.shell.extensions.screentime" path="/org/gnome/shell/extensions/screentime/">
+    <!-- Look -->
+    <key name="style" type="s">
+      <choices><choice value="match"/><choice value="black"/><choice value="graphite"/><choice value="light"/></choices>
+      <default>'match'</default>
+      <summary>Island style</summary>
+      <description>Match takes the top bar's own colour so the two join without a seam (black when the bar is see-through). Black, Graphite and Light are fixed.</description>
+    </key>
+    <key name="accent" type="s">
+      <choices>
+        <choice value="blue"/><choice value="green"/><choice value="orange"/><choice value="pink"/>
+        <choice value="purple"/><choice value="teal"/><choice value="mono"/>
+      </choices>
+      <default>'blue'</default>
+      <summary>Accent colour</summary>
+      <description>For the limit ring, today's bar and the focus timer.</description>
+    </key>
+    <key name="size" type="s">
+      <choices><choice value="small"/><choice value="regular"/><choice value="large"/></choices>
+      <default>'regular'</default>
+      <summary>Size of the closed island</summary>
+    </key>
+    <key name="placement" type="s">
+      <choices><choice value="top"/><choice value="attached"/><choice value="floating"/></choices>
+      <default>'top'</default>
+      <summary>Placement</summary>
+      <description>Top sits in the top bar at the very top of the screen, in place of the clock; Attached hangs from the bottom of the bar; Floating hangs just below it, rounded all round.</description>
+    </key>
+
+    <!-- What the closed island shows -->
+    <key name="compact-left" type="s">
+      <choices><choice value="app"/><choice value="status"/><choice value="none"/></choices>
+      <default>'app'</default>
+      <summary>Left of the closed island</summary>
+      <description>The app in front, a status icon, or nothing.</description>
+    </key>
+    <key name="compact-center" type="s">
+      <choices><choice value="total"/><choice value="clock"/></choices>
+      <default>'total'</default>
+      <summary>Middle of the closed island</summary>
+      <description>Today's screen time, or the time of day.</description>
+    </key>
+    <key name="compact-right" type="s">
+      <choices><choice value="ring"/><choice value="none"/></choices>
+      <default>'ring'</default>
+      <summary>Right of the closed island</summary>
+      <description>A ring for the daily limit (when one is set), or nothing.</description>
+    </key>
+
+    <!-- Behaviour -->
+    <key name="open-on" type="s">
+      <choices><choice value="hover"/><choice value="click"/></choices>
+      <default>'hover'</default>
+      <summary>Open on</summary>
+      <description>Rest the pointer on the island, or click it.</description>
+    </key>
+    <key name="hover-delay" type="i">
+      <range min="60" max="1000"/>
+      <default>150</default>
+      <summary>Hover delay (ms)</summary>
+      <description>How long the pointer rests on the island before it opens, so passing over it does not.</description>
+    </key>
+    <key name="motion" type="s">
+      <choices><choice value="playful"/><choice value="calm"/><choice value="off"/></choices>
+      <default>'playful'</default>
+      <summary>Motion</summary>
+      <description>Playful springs a little past its size; Calm settles without; Off jumps. The system's reduce-motion setting always wins.</description>
+    </key>
+    <key name="monitor" type="s">
+      <choices><choice value="primary"/><choice value="active"/></choices>
+      <default>'primary'</default>
+      <summary>Display</summary>
+      <description>The main display, or the one with the window you are using.</description>
+    </key>
+    <key name="reserve-space" type="b">
+      <default>false</default>
+      <summary>Keep windows clear of the island</summary>
+      <description>Reserve the height of the closed island under the top bar, so maximised windows start below it instead of under it.</description>
+    </key>
+    <key name="alerts" type="b">
+      <default>true</default>
+      <summary>Alerts in the island</summary>
+      <description>Limits reached and reminders open the island for a few seconds.</description>
+    </key>
+
+    <!-- Personal -->
+    <key name="greeting" type="b">
+      <default>true</default>
+      <summary>Greet me</summary>
+      <description>Say good morning, afternoon or evening at the first activity of the day.</description>
+    </key>
+    <key name="nickname" type="s">
+      <default>''</default>
+      <summary>What to call you</summary>
+      <description>Used in the greeting. Empty uses your first name from the system.</description>
+    </key>
+  </schema>
+</schemalist>

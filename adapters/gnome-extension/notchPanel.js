@@ -1,8 +1,9 @@
 /**
- * The Screen Time panel that drops from the notch (docs/adr/0014): the date,
+ * The Screen Time panel inside the open island (docs/adr/0014): the date,
  * today's total beside one overall daily limit, the apps used, the last seven
  * days and the apps by time, with a popover to set the daily limit. It only
- * draws what it is given; notchUI.js loads the data and handles the buttons.
+ * draws what it is given, in the colours of the user's theme (palette.js);
+ * notchUI.js loads the data, owns the island's shape and handles the buttons.
  */
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
@@ -10,10 +11,8 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 
 import { formatShort } from './notch.js';
+import { PANEL_WIDTH, css, theme as makeTheme, unit } from './palette.js';
 
-const WIDTH = 780;
-const MUTED = 'rgb(150,143,137)';
-const CARD = 'background-color: rgb(24,22,21); border-radius: 22px;';
 const LIMIT_CHOICES = [60, 120, 240, 360, 480];
 const SNAP = 15; // minutes per step on the − and + buttons
 
@@ -21,31 +20,36 @@ const label = (text, style = '', props = {}) => new St.Label({ text, style, ...p
 const row = (style = '', props = {}) => new St.BoxLayout({ style, ...props });
 const col = (style = '', props = {}) => new St.BoxLayout({ vertical: true, style, ...props });
 
-/** The ring beside the limit: how much of it is used, filled in white. */
-const Ring = GObject.registerClass(
-  class ScreentimeNotchRing extends St.DrawingArea {
-    _init(size) {
+/** A ring: how much of the limit is used, in the accent colour. */
+export const Ring = GObject.registerClass(
+  class ScreentimeIslandRing extends St.DrawingArea {
+    _init(size, width = 5) {
       super._init({ width: size, height: size, y_align: Clutter.ActorAlign.CENTER });
       this._size = size;
+      this._width = width;
       this._fraction = 0;
+      this._fg = [255, 255, 255];
+      this._accent = [10, 132, 255];
     }
 
-    set(fraction) {
+    set(fraction, fg, accent) {
       this._fraction = Math.max(0, Math.min(1, fraction));
+      if (fg) this._fg = fg;
+      if (accent) this._accent = accent;
       this.queue_repaint();
     }
 
     vfunc_repaint() {
       const cr = this.get_context();
       const c = this._size / 2;
-      const r = c - 4;
-      cr.setLineWidth(5);
+      const r = c - this._width / 2 - 1;
+      cr.setLineWidth(this._width);
       cr.setLineCap(1);
-      cr.setSourceRGBA(1, 1, 1, 0.14);
+      cr.setSourceRGBA(...unit(this._fg, 0.16));
       cr.arc(c, c, r, 0, 2 * Math.PI);
       cr.stroke();
       if (this._fraction > 0) {
-        cr.setSourceRGBA(1, 1, 1, 1);
+        cr.setSourceRGBA(...unit(this._accent));
         cr.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * this._fraction);
         cr.stroke();
       }
@@ -54,52 +58,95 @@ const Ring = GObject.registerClass(
   },
 );
 
-/** The logo: a white rounded square with a clock, like the app's. */
+/** The logo: a rounded square with a clock, in the theme's text colour. */
 const Logo = GObject.registerClass(
-  class ScreentimeNotchLogo extends St.DrawingArea {
-    _init() {
-      super._init({ width: 34, height: 34, y_align: Clutter.ActorAlign.CENTER });
+  class ScreentimeIslandLogo extends St.DrawingArea {
+    _init(t) {
+      super._init({ width: 30, height: 30, y_align: Clutter.ActorAlign.CENTER });
+      this._t = t;
     }
 
     vfunc_repaint() {
       const cr = this.get_context();
-      cr.setSourceRGBA(0.96, 0.93, 0.9, 1);
-      const r = 10;
-      cr.arc(34 - r, r, r, -Math.PI / 2, 0);
-      cr.arc(34 - r, 34 - r, r, 0, Math.PI / 2);
-      cr.arc(r, 34 - r, r, Math.PI / 2, Math.PI);
+      const t = this._t;
+      cr.setSourceRGBA(...unit(t.fg));
+      const r = 9;
+      const s = 30;
+      cr.arc(s - r, r, r, -Math.PI / 2, 0);
+      cr.arc(s - r, s - r, r, 0, Math.PI / 2);
+      cr.arc(r, s - r, r, Math.PI / 2, Math.PI);
       cr.arc(r, r, r, Math.PI, 1.5 * Math.PI);
       cr.closePath();
       cr.fill();
-      cr.setSourceRGBA(0.08, 0.07, 0.06, 1);
-      cr.setLineWidth(2.4);
+      cr.setSourceRGBA(...unit(t.bg));
+      cr.setLineWidth(2.2);
       cr.setLineCap(1);
-      cr.arc(17, 17, 8, 0, 2 * Math.PI);
+      cr.arc(15, 15, 7, 0, 2 * Math.PI);
       cr.stroke();
-      cr.moveTo(17, 12.5);
-      cr.lineTo(17, 17);
-      cr.lineTo(20.5, 19);
+      cr.moveTo(15, 11);
+      cr.lineTo(15, 15);
+      cr.lineTo(18, 16.8);
       cr.stroke();
       cr.$dispose();
     }
   },
 );
 
-function switchActor(on, onToggle) {
+/** An app's icon from its .desktop file, or its initial on a tile. */
+export function appIcon(appId, name, size, t) {
+  const app =
+    Shell.AppSystem.get_default().lookup_app(`${appId}.desktop`) ??
+    Shell.AppSystem.get_default().lookup_app(appId);
+  const gicon = app?.get_icon();
+  if (gicon) return new St.Icon({ gicon, icon_size: size, y_align: Clutter.ActorAlign.CENTER });
+  const letter = (name || appId || '?').trim().charAt(0).toUpperCase();
+  return new St.Bin({
+    width: size,
+    height: size,
+    y_align: Clutter.ActorAlign.CENTER,
+    style: `border-radius: ${Math.round(size * 0.3)}px; background-color: ${css(t.raised)};`,
+    child: label(
+      letter,
+      `color: ${css(t.fg)}; font-weight: 700; font-size: ${Math.round(size * 0.46)}px;`,
+      {
+        x_align: Clutter.ActorAlign.CENTER,
+        y_align: Clutter.ActorAlign.CENTER,
+      },
+    ),
+  });
+}
+
+function iconButton(iconName, t, onClick, accessible) {
+  const b = new St.Button({
+    reactive: true,
+    can_focus: true,
+    track_hover: true,
+    accessible_name: accessible,
+    style: `border-radius: 15px; padding: 7px; color: ${css(t.muted)};`,
+    child: new St.Icon({ icon_name: iconName, icon_size: 16 }),
+  });
+  b.connect('notify::hover', () => {
+    b.style = `border-radius: 15px; padding: 7px; color: ${css(b.hover ? t.fg : t.muted)}; background-color: ${b.hover ? css(t.raised) : 'transparent'};`;
+  });
+  b.connect('clicked', onClick);
+  return b;
+}
+
+function switchActor(on, t, onToggle) {
   const track = new St.Button({
     reactive: true,
     can_focus: true,
     track_hover: true,
-    width: 46,
-    height: 26,
+    width: 42,
+    height: 24,
     y_align: Clutter.ActorAlign.CENTER,
   });
-  const knob = new St.Widget({ width: 20, height: 20, y_align: Clutter.ActorAlign.CENTER });
+  const knob = new St.Widget({ width: 18, height: 18, y_align: Clutter.ActorAlign.CENTER });
   const bin = new St.Bin({ child: knob, x_expand: true, y_expand: true });
   track.set_child(bin);
   const paint = (state) => {
-    track.style = `border-radius: 13px; background-color: ${state ? 'rgb(245,238,230)' : 'rgb(70,64,59)'};`;
-    knob.style = `border-radius: 10px; background-color: ${state ? 'rgb(12,10,9)' : 'rgb(150,143,137)'}; margin: 0 3px;`;
+    track.style = `border-radius: 12px; background-color: ${css(state ? t.accent : t.track)};`;
+    knob.style = `border-radius: 9px; background-color: ${state ? css(t.onAccent) : css(t.muted)}; margin: 0 3px;`;
     bin.x_align = state ? Clutter.ActorAlign.END : Clutter.ActorAlign.START;
   };
   let state = on;
@@ -112,46 +159,32 @@ function switchActor(on, onToggle) {
   return track;
 }
 
-function appIcon(appId, name) {
-  const app = Shell.AppSystem.get_default().lookup_app(`${appId}.desktop`);
-  const gicon = app?.get_icon();
-  if (gicon) return new St.Icon({ gicon, icon_size: 30, y_align: Clutter.ActorAlign.CENTER });
-  const letter = (name || appId || '?').trim().charAt(0).toUpperCase();
-  const box = new St.Bin({
-    width: 30,
-    height: 30,
-    y_align: Clutter.ActorAlign.CENTER,
-    style: 'border-radius: 9px; background-color: rgb(72,64,58);',
-    child: label(letter, 'color: white; font-weight: 700; font-size: 14px;', {
-      x_align: Clutter.ActorAlign.CENTER,
-      y_align: Clutter.ActorAlign.CENTER,
-    }),
-  });
-  return box;
-}
-
 export class StatsPanel {
   /**
-   * @param {{onClose: () => void, onSaveLimit: (minutes: number, overlay: boolean) => void,
+   * @param {{onClose: () => void, onSettings: () => void, onSaveLimit: (minutes: number, overlay: boolean) => void,
    *          onRemoveLimit: () => void, onTogglePause: () => void}} h
    */
   constructor(h) {
     this._h = h;
+    this._t = makeTheme();
     this.actor = new St.Widget({
       layout_manager: new Clutter.BinLayout(),
       reactive: true,
-      visible: false,
       can_focus: true,
-      width: WIDTH,
+      width: PANEL_WIDTH,
     });
-    // One black window holds everything, joined to the top bar above it.
-    this._body = col(
-      'background-color: rgb(0,0,0); border-radius: 0 0 30px 30px; padding: 6px 16px 16px 16px;',
-      { x_expand: true, y_align: Clutter.ActorAlign.START },
-    );
+    this._body = col('padding: 8px 18px 18px 18px;', {
+      x_expand: true,
+      y_align: Clutter.ActorAlign.START,
+    });
     this._popover = null;
     this.actor.add_child(this._body);
     this._draft = { minutes: 60, overlay: true };
+  }
+
+  setTheme(t) {
+    this._t = t;
+    if (this._data) this.update(this._data, true);
   }
 
   /**
@@ -159,17 +192,21 @@ export class StatsPanel {
    *          limit: ?{id: number, dailyMs: number, action: string}, days: {label: string, ms: number, today: boolean}[],
    *          avg: string, apps: {appId: string, name: string, time: string, percent: number}[], paused: boolean}} d
    */
-  update(d) {
+  update(d, force = false) {
+    // Rebuilding is the costly part of opening, so skip it when nothing changed.
+    const key = JSON.stringify(d);
+    if (!force && key === this._key) return false;
+    this._key = key;
     this._data = d;
+    this.closePopover();
     this._body.destroy_all_children();
     this._body.add_child(this._header(d));
-    const grid = row('spacing: 12px; margin-top: 10px;');
-    const left = col('spacing: 12px;', { width: 462 });
-    left.add_child(this._todayCard(d));
-    left.add_child(this._weekCard(d));
-    grid.add_child(left);
+    this._body.add_child(this._todayCard(d));
+    const grid = row('spacing: 10px; margin-top: 10px;', { x_expand: true });
+    grid.add_child(this._weekCard(d));
     grid.add_child(this._appsCard(d));
     this._body.add_child(grid);
+    return true;
   }
 
   closePopover() {
@@ -179,171 +216,172 @@ export class StatsPanel {
 
   // ---- parts ------------------------------------------------------------
 
+  _card(extra = '', props = {}) {
+    return col(`background-color: ${css(this._t.card)}; border-radius: 20px; ${extra}`, props);
+  }
+
   _header(d) {
-    const h = row('spacing: 12px; padding: 2px 4px 0 4px;', { y_align: Clutter.ActorAlign.CENTER });
-    h.add_child(new Logo());
+    const t = this._t;
+    const h = row('spacing: 10px; padding: 0 0 10px 2px;', { y_align: Clutter.ActorAlign.CENTER });
+    h.add_child(new Logo(t));
     h.add_child(
-      label('Screen Time', 'color: white; font-size: 20px; font-weight: 600;', {
+      label('Screen Time', `color: ${css(t.fg)}; font-size: 17px; font-weight: 600;`, {
         y_align: Clutter.ActorAlign.CENTER,
       }),
     );
     h.add_child(
+      label(d.dateLabel, `color: ${css(t.muted)}; font-size: 15px;`, {
+        y_align: Clutter.ActorAlign.CENTER,
+      }),
+    );
+    h.add_child(new St.Widget({ x_expand: true }));
+    const dot =
+      d.tracking === 'Tracking'
+        ? [48, 209, 88]
+        : d.tracking === 'Paused'
+          ? [255, 159, 10]
+          : t.muted;
+    const chip = row(
+      `spacing: 6px; padding: 4px 10px; border-radius: 12px; background-color: ${css(t.raised)};`,
+      { y_align: Clutter.ActorAlign.CENTER },
+    );
+    chip.add_child(
       new St.Widget({
-        width: 1,
-        height: 22,
-        style: 'background-color: rgb(58,52,47);',
+        width: 7,
+        height: 7,
         y_align: Clutter.ActorAlign.CENTER,
+        style: `border-radius: 4px; background-color: ${css(dot)};`,
       }),
     );
+    chip.add_child(label(d.tracking, `color: ${css(t.fg)}; font-size: 12px;`));
+    h.add_child(chip);
     h.add_child(
-      label(d.dateLabel, `color: ${MUTED}; font-size: 18px;`, {
-        y_align: Clutter.ActorAlign.CENTER,
-      }),
+      iconButton('emblem-system-symbolic', t, () => this._h.onSettings(), 'Island settings'),
     );
-    const spacer = new St.Widget({ x_expand: true });
-    h.add_child(spacer);
-    h.add_child(
-      label(
-        d.tracking,
-        'color: white; font-size: 13px; background-color: rgb(36,33,31); border-radius: 14px; padding: 5px 12px;',
-        {
-          y_align: Clutter.ActorAlign.CENTER,
-        },
-      ),
-    );
-    const close = new St.Button({
-      reactive: true,
-      can_focus: true,
-      track_hover: true,
-      style: `color: ${MUTED}; font-size: 20px; padding: 0 6px;`,
-      label: '✕',
-    });
-    close.connect('clicked', () => this._h.onClose());
-    h.add_child(close);
     return h;
   }
 
   _todayCard(d) {
-    const card = col(`${CARD} padding: 14px 18px 16px 18px; spacing: 8px;`);
-    card.add_child(label('Today', `color: ${MUTED}; font-size: 13px;`));
+    const t = this._t;
+    const card = this._card('padding: 14px 18px 16px 18px; spacing: 8px;', { x_expand: true });
+    card.add_child(label('Today', `color: ${css(t.muted)}; font-size: 13px;`));
     const cells = row('', { x_expand: true });
 
-    const cell = (big, small, extra = '') => {
-      const c = col(`spacing: 2px; ${extra}`, {
-        x_expand: true,
-        x_align: Clutter.ActorAlign.CENTER,
-      });
+    const cell = (big, small) => {
+      const c = col('spacing: 2px;', { x_expand: true, x_align: Clutter.ActorAlign.CENTER });
       c.add_child(
-        label(big, 'color: white; font-size: 30px; font-weight: 600;', {
+        label(
+          big,
+          `color: ${css(t.fg)}; font-size: 28px; font-weight: 600; font-feature-settings: "tnum";`,
+          {
+            x_align: Clutter.ActorAlign.CENTER,
+          },
+        ),
+      );
+      c.add_child(
+        label(small, `color: ${css(t.muted)}; font-size: 12px;`, {
           x_align: Clutter.ActorAlign.CENTER,
         }),
       );
-      c.add_child(
-        label(small, `color: ${MUTED}; font-size: 13px;`, { x_align: Clutter.ActorAlign.CENTER }),
-      );
       return c;
     };
+    const divider = () =>
+      new St.Widget({ width: 1, style: `background-color: ${css(t.line)}; margin: 4px 0;` });
     cells.add_child(cell(d.total, 'Screen time'));
-    cells.add_child(
-      new St.Widget({ width: 1, style: 'background-color: rgb(46,42,39); margin: 4px 0;' }),
-    );
+    cells.add_child(divider());
 
-    // the limit: a ring, how far over or under, and a pencil that opens the popover
+    // the limit: a ring, how far over or under, and a link that opens the popover
     const limitBox = row('spacing: 12px;', {
       x_expand: true,
       x_align: Clutter.ActorAlign.CENTER,
       y_align: Clutter.ActorAlign.CENTER,
     });
-    const ring = new Ring(52);
+    const ring = new Ring(48);
     const limitMs = d.limit?.dailyMs ?? 0;
-    ring.set(limitMs ? d.totalMs / limitMs : 0);
+    ring.set(
+      limitMs ? d.totalMs / limitMs : 0,
+      t.fg,
+      d.totalMs >= limitMs && limitMs ? [255, 69, 58] : t.accent,
+    );
     limitBox.add_child(ring);
     const text = col('spacing: 2px;', { y_align: Clutter.ActorAlign.CENTER });
     if (limitMs) {
       const over = d.totalMs - limitMs;
-      const head = row('spacing: 6px;', { y_align: Clutter.ActorAlign.END });
+      const head = row('spacing: 5px;', { y_align: Clutter.ActorAlign.END });
       head.add_child(
         label(
           over >= 0 ? `+${formatShort(over)}` : formatShort(-over),
-          'color: white; font-size: 24px; font-weight: 600;',
+          `color: ${css(t.fg)}; font-size: 22px; font-weight: 600;`,
         ),
       );
       head.add_child(
-        label(over >= 0 ? 'over' : 'left', `color: ${MUTED}; font-size: 14px;`, {
+        label(over >= 0 ? 'over' : 'left', `color: ${css(t.muted)}; font-size: 13px;`, {
           y_align: Clutter.ActorAlign.END,
         }),
       );
       text.add_child(head);
     } else {
-      text.add_child(label('No limit', 'color: white; font-size: 22px; font-weight: 600;'));
+      text.add_child(label('No limit', `color: ${css(t.fg)}; font-size: 20px; font-weight: 600;`));
     }
     const edit = new St.Button({
       reactive: true,
       can_focus: true,
       track_hover: true,
-      style: `color: ${MUTED}; font-size: 13px; padding: 0;`,
+      style: 'padding: 0;',
     });
-    edit.set_child(
-      label(
-        limitMs ? `of ${formatShort(limitMs)} limit  ✎` : 'Set a daily limit  ✎',
-        `color: ${MUTED}; font-size: 13px;`,
-      ),
+    const editText = label(
+      limitMs ? `of ${formatShort(limitMs)} limit ›` : 'Set a daily limit ›',
+      `color: ${css(t.accent)}; font-size: 12px;`,
     );
+    edit.set_child(editText);
     edit.connect('clicked', () => this._togglePopover());
     text.add_child(edit);
     limitBox.add_child(text);
     cells.add_child(limitBox);
 
-    cells.add_child(
-      new St.Widget({ width: 1, style: 'background-color: rgb(46,42,39); margin: 4px 0;' }),
-    );
+    cells.add_child(divider());
     cells.add_child(cell(String(d.appsUsed), 'Apps used'));
     card.add_child(cells);
     return card;
   }
 
   _weekCard(d) {
-    const card = col(`${CARD} padding: 14px 18px 14px 18px; spacing: 6px;`);
+    const t = this._t;
+    const card = this._card('padding: 14px 16px 12px 16px; spacing: 6px;', { x_expand: true });
     const head = row('', { x_expand: true });
-    head.add_child(label('Last 7 days', `color: ${MUTED}; font-size: 13px;`, { x_expand: true }));
-    head.add_child(label(`avg ${d.avg}`, `color: ${MUTED}; font-size: 13px;`));
+    head.add_child(
+      label('Last 7 days', `color: ${css(t.muted)}; font-size: 13px;`, { x_expand: true }),
+    );
+    head.add_child(label(`avg ${d.avg}`, `color: ${css(t.muted)}; font-size: 12px;`));
     card.add_child(head);
     const max = Math.max(...d.days.map((x) => x.ms), 15 * 60000);
-    const bars = row('spacing: 6px;', { x_expand: true });
+    const bars = row('spacing: 4px; margin-top: 4px;', { x_expand: true });
     for (const day of d.days) {
-      const c = col('spacing: 4px;', { x_expand: true, x_align: Clutter.ActorAlign.FILL });
+      const c = col('spacing: 5px;', { x_expand: true, x_align: Clutter.ActorAlign.FILL });
       const stage = new St.Widget({
-        height: 92,
+        height: 104,
         x_expand: true,
         layout_manager: new Clutter.BinLayout(),
       });
-      if (day.ms > 0) {
-        const h = Math.max(4, Math.round((day.ms / max) * 84));
-        stage.add_child(
-          new St.Widget({
-            width: 30,
-            height: h,
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.END,
-            style: `border-radius: 9px 9px 4px 4px; background-color: ${day.today ? 'rgb(245,238,230)' : 'rgb(74,67,61)'};`,
-          }),
-        );
-      } else {
-        stage.add_child(
-          new St.Widget({
-            width: 14,
-            height: 2,
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.END,
-            style: 'background-color: rgb(58,52,47);',
-          }),
-        );
-      }
+      const h = day.ms > 0 ? Math.max(5, Math.round((day.ms / max) * 98)) : 3;
+      stage.add_child(
+        new St.Widget({
+          width: day.ms > 0 ? 22 : 12,
+          height: h,
+          x_align: Clutter.ActorAlign.CENTER,
+          y_align: Clutter.ActorAlign.END,
+          style: `border-radius: ${day.ms > 0 ? '7px 7px 3px 3px' : '2px'}; background-color: ${day.today ? css(t.accent) : css(t.track)};`,
+        }),
+      );
       c.add_child(stage);
       c.add_child(
-        label(day.label, `color: ${day.today ? 'white' : MUTED}; font-size: 12px;`, {
-          x_align: Clutter.ActorAlign.CENTER,
-        }),
+        label(
+          day.label.charAt(0),
+          `color: ${day.today ? css(t.fg) : css(t.muted)}; font-size: 11px;`,
+          {
+            x_align: Clutter.ActorAlign.CENTER,
+          },
+        ),
       );
       bars.add_child(c);
     }
@@ -352,29 +390,39 @@ export class StatsPanel {
   }
 
   _appsCard(d) {
-    const card = col(`${CARD} padding: 14px 14px 12px 14px; spacing: 8px;`, { x_expand: true });
-    card.add_child(label('By app', `color: ${MUTED}; font-size: 13px; padding-left: 4px;`));
+    const t = this._t;
+    const card = this._card('padding: 14px 10px 10px 10px; spacing: 2px;', { x_expand: true });
+    card.add_child(
+      label('By app', `color: ${css(t.muted)}; font-size: 13px; padding: 0 6px 4px 6px;`),
+    );
     if (d.apps.length === 0)
       card.add_child(
-        label('Nothing tracked yet today.', `color: ${MUTED}; font-size: 13px; padding: 8px 4px;`),
+        label(
+          'Nothing tracked yet today.',
+          `color: ${css(t.muted)}; font-size: 13px; padding: 8px 6px;`,
+        ),
       );
-    d.apps.forEach((a, i) => {
-      const item = row(
-        `spacing: 10px; padding: 6px 8px; border-radius: 14px; ${i === 0 ? 'background-color: rgb(36,33,31);' : ''}`,
-        { x_expand: true },
-      );
-      item.add_child(appIcon(a.appId, a.name));
+    for (const a of d.apps.slice(0, 4)) {
+      const item = row('spacing: 10px; padding: 5px 6px; border-radius: 12px;', {
+        x_expand: true,
+        reactive: true,
+        track_hover: true,
+      });
+      item.connect('notify::hover', () => {
+        item.style = `spacing: 10px; padding: 5px 6px; border-radius: 12px; background-color: ${item.hover ? css(t.raised) : 'transparent'};`;
+      });
+      item.add_child(appIcon(a.appId, a.name, 26, t));
       const mid = col('spacing: 5px;', { x_expand: true, y_align: Clutter.ActorAlign.CENTER });
-      const name = label(a.name, 'color: white; font-size: 14px;');
+      const name = label(a.name, `color: ${css(t.fg)}; font-size: 13px;`);
       name.clutter_text.ellipsize = 3;
       mid.add_child(name);
       const track = new St.Widget({
         height: 3,
-        style: 'background-color: rgb(58,52,47); border-radius: 2px;',
+        style: `background-color: ${css(t.track)}; border-radius: 2px;`,
       });
       const fill = new St.Widget({
         height: 3,
-        style: 'background-color: rgb(245,238,230); border-radius: 2px;',
+        style: `background-color: ${css(t.accent)}; border-radius: 2px;`,
       });
       track.add_child(fill);
       track.connect('notify::width', () =>
@@ -382,20 +430,17 @@ export class StatsPanel {
       );
       mid.add_child(track);
       item.add_child(mid);
-      const nums = col('spacing: 0;', { y_align: Clutter.ActorAlign.CENTER });
-      nums.add_child(
-        label(a.time, 'color: white; font-size: 14px; font-weight: 600;', {
-          x_align: Clutter.ActorAlign.END,
-        }),
+      item.add_child(
+        label(
+          a.time,
+          `color: ${css(t.fg)}; font-size: 13px; font-weight: 600; font-feature-settings: "tnum";`,
+          {
+            y_align: Clutter.ActorAlign.CENTER,
+          },
+        ),
       );
-      nums.add_child(
-        label(a.percent === 0 ? '<1%' : `${a.percent}%`, `color: ${MUTED}; font-size: 11px;`, {
-          x_align: Clutter.ActorAlign.END,
-        }),
-      );
-      item.add_child(nums);
       card.add_child(item);
-    });
+    }
     return card;
   }
 
@@ -416,23 +461,28 @@ export class StatsPanel {
   }
 
   _buildPopover() {
+    const t = this._t;
     const d = this._data;
     const pop = col(
-      'spacing: 12px; padding: 16px 18px 14px 18px; background-color: rgb(20,18,17); border-radius: 22px; border: 1px solid rgb(48,43,39);',
+      `spacing: 12px; padding: 16px 18px 14px 18px; background-color: ${css(t.raised)}; border-radius: 20px; border: 1px solid ${css(t.line)};`,
       {
-        width: 330,
-        x_align: Clutter.ActorAlign.START,
+        width: 320,
+        x_align: Clutter.ActorAlign.CENTER,
         y_align: Clutter.ActorAlign.START,
         reactive: true,
       },
     );
-    pop.set_style(`${pop.style} margin-left: 110px; margin-top: 118px;`);
-    pop.add_child(label('Daily limit', `color: ${MUTED}; font-size: 14px;`));
+    pop.set_style(`${pop.style} margin-top: 112px;`);
+    pop.add_child(label('Daily limit', `color: ${css(t.muted)}; font-size: 13px;`));
 
-    const value = label('', 'color: white; font-size: 34px; font-weight: 600;', {
-      x_align: Clutter.ActorAlign.CENTER,
-      x_expand: true,
-    });
+    const value = label(
+      '',
+      `color: ${css(t.fg)}; font-size: 30px; font-weight: 600; font-feature-settings: "tnum";`,
+      {
+        x_align: Clutter.ActorAlign.CENTER,
+        x_expand: true,
+      },
+    );
     const chips = [];
     const fmt = (m) =>
       m % 60 === 0
@@ -442,7 +492,7 @@ export class StatsPanel {
       value.text = fmt(this._draft.minutes);
       for (const [mins, chip] of chips) {
         const on = mins === this._draft.minutes;
-        chip.style = `border-radius: 15px; padding: 6px 12px; font-size: 14px; color: ${on ? 'white' : MUTED}; border: 2px solid ${on ? 'rgb(235,228,220)' : 'transparent'};`;
+        chip.style = `border-radius: 12px; padding: 5px 10px; font-size: 13px; color: ${on ? css(t.onAccent) : css(t.muted)}; background-color: ${on ? css(t.accent) : 'transparent'};`;
       }
     };
     const step = (delta) => () => {
@@ -455,10 +505,9 @@ export class StatsPanel {
         reactive: true,
         can_focus: true,
         track_hover: true,
-        width: 40,
-        height: 40,
-        style:
-          'border-radius: 20px; background-color: rgb(36,33,31); color: rgb(190,183,176); font-size: 22px;',
+        width: 36,
+        height: 36,
+        style: `border-radius: 18px; background-color: ${css(t.card)}; color: ${css(t.fg)}; font-size: 20px;`,
       });
       b.connect('clicked', onClick);
       return b;
@@ -470,7 +519,7 @@ export class StatsPanel {
     pop.add_child(stepper);
 
     const chipRow = row(
-      'spacing: 4px; padding-bottom: 10px; border-bottom: 1px solid rgb(44,40,37);',
+      `spacing: 2px; padding-bottom: 10px; border-bottom: 1px solid ${css(t.line)};`,
       { x_expand: true },
     );
     for (const mins of LIMIT_CHOICES) {
@@ -494,12 +543,12 @@ export class StatsPanel {
     const option = (text, on, onToggle) => {
       const r = row('', { x_expand: true, y_align: Clutter.ActorAlign.CENTER });
       r.add_child(
-        label(text, 'color: white; font-size: 14px;', {
+        label(text, `color: ${css(t.fg)}; font-size: 13px;`, {
           x_expand: true,
           y_align: Clutter.ActorAlign.CENTER,
         }),
       );
-      r.add_child(switchActor(on, onToggle));
+      r.add_child(switchActor(on, t, onToggle));
       return r;
     };
     pop.add_child(
@@ -507,33 +556,31 @@ export class StatsPanel {
         this._draft.overlay = v;
       }),
     );
-    pop.add_child(option('Notification at the limit', true, () => {}));
     pop.add_child(option('Pause tracking', d.paused, () => this._h.onTogglePause()));
 
-    const actions = row('padding-top: 4px;', {
+    const actions = row('padding-top: 2px;', {
       x_expand: true,
       y_align: Clutter.ActorAlign.CENTER,
     });
     const remove = new St.Button({
-      label: 'Remove limit',
+      label: d.limit ? 'Remove limit' : 'Cancel',
       reactive: true,
       can_focus: true,
       track_hover: true,
       x_expand: true,
       x_align: Clutter.ActorAlign.START,
-      style: `color: ${MUTED}; font-size: 14px; padding: 0;`,
+      style: `color: ${css(t.muted)}; font-size: 13px; padding: 0;`,
     });
     remove.connect('clicked', () => {
       this.closePopover();
-      this._h.onRemoveLimit();
+      if (d.limit) this._h.onRemoveLimit();
     });
     const save = new St.Button({
       label: 'Save',
       reactive: true,
       can_focus: true,
       track_hover: true,
-      style:
-        'background-color: rgb(245,238,230); color: rgb(12,10,9); border-radius: 18px; padding: 8px 24px; font-size: 14px; font-weight: 600;',
+      style: `background-color: ${css(t.accent)}; color: ${css(t.onAccent)}; border-radius: 16px; padding: 7px 22px; font-size: 13px; font-weight: 600;`,
     });
     save.connect('clicked', () => {
       this.closePopover();

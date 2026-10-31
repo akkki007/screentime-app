@@ -1,7 +1,9 @@
 /**
- * Focus adapter for GNOME Shell (Wayland). Reports the focused window to the
- * tracker daemon over D-Bus so it can turn it into sessions. This extension
- * does no tracking, storage, or network access itself.
+ * Screentime for GNOME Shell. Two jobs:
+ *   - the focus adapter: reports the focused window to the tracker daemon over
+ *     D-Bus so it can turn it into sessions;
+ *   - the island at the top of the screen (notchUI.js), when turned on.
+ * This extension does no tracking, storage, or network access itself.
  *
  * Privacy (issue #3, docs/migration-to-go.md S6): window titles often hold
  * private details, and on Wayland other apps can't normally see them. So:
@@ -62,8 +64,12 @@ export default class ScreentimeFocusExtension extends Extension {
     );
 
     this._tracker = Shell.WindowTracker.get_default();
-    // The notch at the top of the screen (ADR 14); it follows the notchEnabled setting.
-    this._notch = new Notch();
+    // The island at the top of the screen (ADR 14). Whether it shows follows the
+    // tracker's notchEnabled setting; how it looks and behaves, this extension's settings.
+    this._notch = new Notch({
+      settings: this.getSettings(),
+      openPrefs: () => this.openPreferences(),
+    });
     this._notch.enable();
     this._focusHandlerId = global.display.connect('notify::focus-window', () => {
       this._emitFocusChanged();

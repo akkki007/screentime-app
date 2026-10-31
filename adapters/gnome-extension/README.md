@@ -1,8 +1,27 @@
-# GNOME Shell focus adapter
+# Screentime for GNOME Shell
 
-A small GJS (ESM, GNOME 45+) Shell extension that reports the focused window over D-Bus. This is the v1 adapter — the only reliable focus source on GNOME Wayland — consumed by the daemon's `gnome-wayland` provider (`internal/focus/gnome.go`).
+A GJS (ESM, GNOME 45+) Shell extension, shown as **Screentime** in the Extensions app. It does two things:
 
-It intentionally does nothing else: no tracking, no storage, no network access. Keeping it tiny is a deliberate mitigation against GNOME Shell API changes breaking it on upgrade (see `docs/architecture.md#risks-and-open-questions`).
+- **The focus adapter.** It reports the focused window over D-Bus. This is the v1 adapter — the only reliable focus source on GNOME Wayland — consumed by the daemon's `gnome-wayland` provider (`internal/focus/gnome.go`). It does no tracking, storage or network access.
+- **The island** at the top centre of the screen ([ADR 14](../../docs/adr/0014-top-of-screen-notch.md)), when the tracker's `notchEnabled` setting is on (off by default; turn it on in the app's Settings, during onboarding, or in this extension's settings).
+
+## The island
+
+| File | What it does |
+| --- | --- |
+| `notchUI.js` | The island: one shape whose width, height and corner radius follow springs, with the closed island, alerts and the open panel cross-fading inside it |
+| `notchPanel.js` | The open Screen Time panel, drawn in the user's theme |
+| `notch.js` | What the closed island says (shared fixtures with `internal/notch`) |
+| `spring.js` | Retargetable damped springs (`playful` overshoots a little, `calm` does not) |
+| `palette.js` | Styles, accents and sizes, shared by the Shell and the settings window |
+| `prefs.js`, `schemas/` | The settings window (gear in the Extensions app, or in the open island) and its GSettings schema |
+| `daemonClient.js` | The JSON-RPC client for the tracker's socket |
+
+Rest the pointer on it to open it (or click, if set so); it closes 300 ms after the pointer leaves, or with Escape or a click elsewhere when it was opened by a click. Resting on an alert holds it; a right-click puts it away. If the tracker stops while the island is in use, it tries once to start `screentime-daemon.service`, then shows "Screentime is not running" (click it to try again).
+
+**Settings** (all live, no restart): style (match the top bar, black, graphite, light), accent colour, size, placement (attached to the bar or floating below it), what the closed island shows on the left, in the middle and on the right, open on hover or click and the hover delay, motion (playful, calm, off; the system's reduce-motion setting always wins), display (main or the one in use), keep windows clear of the island, alerts in the island, the greeting and what to call you.
+
+The schema must be compiled next to it: `install.sh` and the `.deb` build run `glib-compile-schemas` on `schemas/` (`gschemas.compiled` is git-ignored).
 
 `metadata.json` declares GNOME 45–50. It has only been run on GNOME 50.1; please test the others before relying on that range.
 

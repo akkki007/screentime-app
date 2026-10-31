@@ -67,6 +67,19 @@ Black (`#0c0a09`), white text, the bottom corners rounded and concave shoulders 
 - The greeting uses the account's real name as the system reports it; nothing is stored.
 - A `notchEnabled` setting (default off) turns it on and off everywhere; the extension and the tray process both follow it, and the daemon announces changes with `event.settings` so no restart is needed.
 
+### Update: the island (GNOME), 2026-10-31
+
+The GNOME notch became an island, after studying [isle](https://github.com/zickrian/isle) (GPL-3.0-or-later; ideas only, no code):
+
+- **One shape.** The closed island, alerts and the open panel are one surface whose width, height and corner radius follow damped springs (`spring.js`). Content is centred on the display, not on the moving shape, so it stays still while the shape grows around it, and cross-fades (out 140 ms; in 260 ms after 90 ms; an 8 px slide). The springs run only while the shape moves and rest below half a pixel; a frame that would draw the same whole-pixel shape is skipped.
+- **Hover to open**, after the pointer rests (150 ms by default, within 10 px), so passing over it does nothing; it closes 300 ms after the pointer leaves. Click still works, with Escape and a click elsewhere (tested on the grabbed root: under a GNOME 46 grab, events never reach a stage handler).
+- **Alerts peek** in the same shape instead of replacing the text; the pointer holds one, a right-click dismisses it, a click opens the panel.
+- **Personal.** A GSettings schema and a settings window in the Extensions app (with a live preview): style, accent, size, placement, the closed island's three slots, hover or click, motion, display, alerts, a greeting with a chosen name, and an option to reserve the closed island's height so maximised windows start below it. The default style takes the top bar's own colour, so the island joins it without a seam (black when the bar is see-through).
+- **Setup.** The extension is now named "Screentime" in the Extensions app, onboarding offers to turn the island on, and if the tracker stops while the island is in use it starts `screentime-daemon.service` once.
+- **Lighter opening.** The panel is built ahead of time while closed and rebuilt only when its data changes.
+
+The other desktops' GTK notch is unchanged.
+
 ## Consequences
 
 - Five small implementations instead of one, held together by one model and one set of fixtures. The JavaScript model is a port of the Go one; a fixture failing in one and passing in the other is a bug.

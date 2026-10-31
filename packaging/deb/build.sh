@@ -56,6 +56,9 @@ for f in adapters/gnome-extension/*.js; do
   install -Dm644 "$f" "$EXT_DIR/$(basename "$f")"
 done
 install -Dm644 adapters/gnome-extension/metadata.json "$EXT_DIR/metadata.json"
+# The island's settings (prefs.js): the schema, compiled where the extension looks for it.
+install -Dm644 adapters/gnome-extension/schemas/*.gschema.xml -t "$EXT_DIR/schemas/"
+glib-compile-schemas --strict "$EXT_DIR/schemas"
 
 echo "==> KWin script"
 KWIN_DIR="$STAGE/usr/share/kwin/scripts/screentime"

@@ -17,6 +17,9 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
+# The island's settings need their schema compiled next to it (gschemas.compiled is git-ignored).
+glib-compile-schemas --strict "$SRC/schemas"
+
 mkdir -p "$(dirname "$DEST")"
 ln -sfn "$SRC" "$DEST"
 echo "linked $DEST -> $SRC"

@@ -1,7 +1,8 @@
 {
   "uuid": "screentime-focus@akkki007.github.io",
-  "name": "Screentime Focus Reporter",
-  "description": "Reports the focused window (app id, title, pid) to the Screentime tracker daemon over D-Bus. Does no tracking itself.",
+  "name": "Screentime",
+  "description": "An island at the top of the screen with today's screen time, your focus timer and gentle nudges, for the Screentime app. Also tells the Screentime tracker which window is in front. Everything stays on your computer.",
   "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "settings-schema": "org.gnome.shell.extensions.screentime",
   "url": "https://github.com/akkki007/screentime-app"
 }

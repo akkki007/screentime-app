@@ -41,3 +41,6 @@ artifacts/
 # Go
 /bin/
 
+
+# Compiled from adapters/gnome-extension/schemas by the install script and the .deb build.
+adapters/gnome-extension/schemas/gschemas.compiled

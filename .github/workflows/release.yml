@@ -62,6 +62,9 @@ jobs:
               [ -f "$ext/$m" ] || { echo "::error::$(basename "$f") imports $m, which is not packaged"; missing=1; }
             done
           done
+          # The island's settings window needs its compiled schema.
+          [ -f "$ext/schemas/gschemas.compiled" ] || { echo "::error::the extension's settings schema is not compiled"; missing=1; }
+          [ -f "$ext/prefs.js" ] || { echo "::error::prefs.js is not packaged"; missing=1; }
           exit $missing
 
       - name: Upload the .deb

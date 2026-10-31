@@ -4,9 +4,15 @@ import { store } from '../lib/store.svelte';
 import Button from './Button.svelte';
 import Icon from './Icon.svelte';
 import Modal from './Modal.svelte';
+import Toggle from './Toggle.svelte';
 
 let step = $state(0);
 const detected = $derived(Boolean(store.status?.currentAppId) || store.mode === 'mock');
+
+async function setIsland(on: boolean) {
+  const updated = await store.attempt(() => daemon('settings.set', { notchEnabled: on }));
+  if (updated) store.settings = updated;
+}
 
 async function finish() {
   const updated = await store.attempt(() => daemon('settings.set', { onboardingDone: true }));
@@ -41,9 +47,18 @@ async function finish() {
 			<p class="text-muted">The browser extension is optional and adds per-site time. See the README to install it.</p>
 		</div>
 	{:else}
-		<p class="text-[13px] leading-relaxed">
-			Give it a day of normal use, then check <b>Today</b> and <b>Trends</b>. Tracking continues in the background even when this window is closed.
-		</p>
+		<div class="flex flex-col gap-4 text-[13px] leading-relaxed">
+			<p>
+				Give it a day of normal use, then check <b>Today</b> and <b>Trends</b>. Tracking continues in the background even when this window is closed.
+			</p>
+			<div class="flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-2/70 p-3">
+				<div>
+					<p class="font-medium">Show the island</p>
+					<p class="mt-0.5 text-xs text-muted">Today's total at the top of your screen, with your focus timer and gentle nudges. You can change it any time in Settings.</p>
+				</div>
+				<Toggle label="Show the island" checked={store.settings?.notchEnabled ?? false} onchange={setIsland} />
+			</div>
+		</div>
 	{/if}
 
 	{#snippet footer()}
