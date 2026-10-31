@@ -557,6 +557,7 @@
             "downtimeStart": "22:00",
             "downtimeEnd": "07:00",
             "onboardingDone": true,
+            "notchEnabled": true,
             "plannerEnabled": false,
             "plannerProvider": "local",
             "plannerEndpoint": "",

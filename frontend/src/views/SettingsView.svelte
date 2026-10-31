@@ -57,6 +57,9 @@ const IDLE_OPTIONS = [1, 2, 3, 5, 10, 15, 30];
 					{#each IDLE_OPTIONS as m}<option value={m}>{m} minute{m === 1 ? "" : "s"}</option>{/each}
 				</select>
 			</SettingRow>
+			<SettingRow title="Show the notch" description="A small black pill at the top of the screen with today's total. It shows your focus timer and speaks up at a limit or a reminder. Click it for today's top apps.">
+				<Toggle label="Show the notch" checked={settings.notchEnabled} onchange={(v) => save({ notchEnabled: v })} />
+			</SettingRow>
 		</Card>
 
 		<Card title="Privacy">

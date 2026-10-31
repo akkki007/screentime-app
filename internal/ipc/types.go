@@ -81,6 +81,8 @@ type Settings struct {
 	DowntimeStart         string `json:"downtimeStart"`
 	DowntimeEnd           string `json:"downtimeEnd"`
 	OnboardingDone        bool   `json:"onboardingDone"`
+	// NotchEnabled shows the notch at the top of the screen (ADR 14).
+	NotchEnabled bool `json:"notchEnabled"`
 
 	// The optional planner (ADR 8). Off by default; the daemon does nothing
 	// planner-related until PlannerEnabled is true.
@@ -100,6 +102,7 @@ var DefaultSettings = Settings{
 	BreakLengthMinutes:   5,
 	DowntimeStart:        "22:00",
 	DowntimeEnd:          "07:00",
+	NotchEnabled:         true,
 	PlannerProvider:      "local",
 	PlannerIdleMinutes:   5,
 }
@@ -115,6 +118,7 @@ type SettingsPatch struct {
 	DowntimeStart         *string
 	DowntimeEnd           *string
 	OnboardingDone        *bool
+	NotchEnabled          *bool
 
 	PlannerEnabled     *bool
 	PlannerProvider    *string
@@ -256,6 +260,7 @@ func ParseSettingsPatch(params json.RawMessage) (SettingsPatch, error) {
 	p.DowntimeStart = optClock("downtimeStart")
 	p.DowntimeEnd = optClock("downtimeEnd")
 	p.OnboardingDone = optBool("onboardingDone")
+	p.NotchEnabled = optBool("notchEnabled")
 	p.PlannerEnabled = optBool("plannerEnabled")
 	p.PlannerProvider = o.OptEnum("plannerProvider", "local", "remote")
 	p.PlannerEndpoint = o.OptString("plannerEndpoint", 200, httpURLRe, "expected an http(s) URL")

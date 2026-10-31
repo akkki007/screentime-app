@@ -24,6 +24,9 @@ export const SettingsSchema = z.object({
 
   onboardingDone: z.boolean().default(false),
 
+  /** Show the notch at the top of the screen (ADR 14). */
+  notchEnabled: z.boolean().default(true),
+
   /**
    * The optional daily planner and AI categorisation. Off by default: while it
    * is off the daemon starts nothing and reads nothing for it.

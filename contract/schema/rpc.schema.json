@@ -339,6 +339,10 @@
             "type": "boolean",
             "default": false
           },
+          "notchEnabled": {
+            "type": "boolean",
+            "default": true
+          },
           "plannerEnabled": {
             "type": "boolean",
             "default": false
@@ -430,6 +434,10 @@
             "type": "boolean",
             "default": false
           },
+          "notchEnabled": {
+            "type": "boolean",
+            "default": true
+          },
           "plannerEnabled": {
             "type": "boolean",
             "default": false
@@ -518,6 +526,10 @@
           "onboardingDone": {
             "type": "boolean",
             "default": false
+          },
+          "notchEnabled": {
+            "type": "boolean",
+            "default": true
           },
           "plannerEnabled": {
             "type": "boolean",
