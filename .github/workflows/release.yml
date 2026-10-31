@@ -1,13 +1,14 @@
-name: Release build
+name: Release
 
-# Builds the .deb when a version tag is pushed. Not yet exercised on GitHub:
-# test it with a throwaway tag before relying on it.
+# A version tag (v0.1.0, ...) builds the .deb and publishes it as a GitHub
+# pre-release. workflow_dispatch only builds it, as a workflow artifact, so
+# the build can be tried without publishing anything.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
-# Least privilege: nothing here needs to write to the repo.
+# Least privilege by default; only the publish job may write (to Releases).
 permissions:
   contents: read
 
@@ -17,6 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # The package takes its version from package.json, so a tag that says
+      # something else would publish a mislabelled .deb.
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          want="v$(jq -r .version package.json)"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json ($want)"
+            exit 1
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -37,8 +49,46 @@ jobs:
       - name: Build the package
         run: packaging/deb/build.sh
 
+      # Every module extension.js imports must be in the package, or the
+      # GNOME extension fails to load and nothing is tracked.
+      - name: Check the packaged GNOME extension is complete
+        run: |
+          dir=$(mktemp -d)
+          dpkg-deb -x dist/*.deb "$dir"
+          ext="$dir/usr/share/gnome-shell/extensions/screentime-focus@akkki007.github.io"
+          missing=0
+          for f in "$ext"/*.js; do
+            for m in $(grep -oE "from '\./[A-Za-z]+\.js'" "$f" | sed -E "s/from '\.\/(.*)'/\1/"); do
+              [ -f "$ext/$m" ] || { echo "::error::$(basename "$f") imports $m, which is not packaged"; missing=1; }
+            done
+          done
+          exit $missing
+
       - name: Upload the .deb
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: screentime-deb
           path: dist/*.deb
+
+  publish:
+    name: Publish the GitHub release
+    needs: deb
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: screentime-deb
+          path: dist
+
+      - name: Create the pre-release with the .deb attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.deb \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Screentime $GITHUB_REF_NAME" \
+            --prerelease \
+            --generate-notes

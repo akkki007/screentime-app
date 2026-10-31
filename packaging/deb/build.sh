@@ -49,7 +49,12 @@ install -Dm644 packaging/systemd/screentime-daemon.service \
 
 echo "==> GNOME Shell extension"
 EXT_DIR="$STAGE/usr/share/gnome-shell/extensions/$EXT_UUID"
-install -Dm644 adapters/gnome-extension/extension.js "$EXT_DIR/extension.js"
+# Every module the extension imports (extension.js pulls in the notch files),
+# but not the tests.
+for f in adapters/gnome-extension/*.js; do
+  case "$f" in *.test.js) continue ;; esac
+  install -Dm644 "$f" "$EXT_DIR/$(basename "$f")"
+done
 install -Dm644 adapters/gnome-extension/metadata.json "$EXT_DIR/metadata.json"
 
 echo "==> KWin script"
@@ -96,8 +101,9 @@ Homepage: https://github.com/akkki007/screentime-app
 Description: Local-first screentime and digital wellbeing tracker
  Tracks app usage on your desktop, shows where your time goes, nudges you to
  take breaks and enforces daily limits. Everything stays on your computer: the
- tracker never uses the network. Includes the tracker daemon, a GNOME Shell
- extension that reports the focused window, and the dashboard.
+ tracker makes no network call unless you turn on the optional planner with
+ a remote provider. Includes the tracker daemon, a GNOME Shell extension that
+ reports the focused window, and the dashboard.
 CONTROL
 
 cat > "$STAGE/DEBIAN/postinst" <<'POSTINST'
