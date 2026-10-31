@@ -47,7 +47,7 @@ Measured on the same machine, production build (`-tags gtk3,production`, strippe
 | Dashboard closed | 126 MB | **37 MB** |
 
 - The steady state, a tray with no window, is 37 MB and the daemon is ~10 MB. Together that is under 50 MB for the always-on part.
-- An open window costs what WebKitGTK costs. We have nothing left to shave there that is not the page itself, and the page is already plain (no blur, backdrop filters or animations; ~220 KB of script, one variable font).
+- An open window costs what WebKitGTK costs. We have nothing left to shave there that is not the page itself, and the page is already plain (no blur, backdrop filters or animations; ~220 KB of script, two variable fonts in Latin only, ~78 KB together).
 - Opening a window starts a process: 0.3 s from the click to a mapped dashboard on the test machine, about what creating a window in-process cost, since the web process is spawned either way.
 - A bug in a window process cannot take the tray, and with it the tray icon, down.
 - There are two code paths in `cmd/screentime` (`run` and `runWindow`), and a window process opens its own daemon connection. Both share `internal/shell`.
