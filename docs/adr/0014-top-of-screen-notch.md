@@ -4,7 +4,15 @@ Date: 2026-10-31
 
 ## Status
 
-Accepted.
+Accepted. What has landed:
+
+| Desktop | State |
+| --- | --- |
+| GNOME | Built, with the Screen Time panel, and checked in a headless Shell. |
+| KDE Plasma, Sway and other wlroots, X11 | Built (the GTK notch), checked on X11 and Sway; KDE itself is untested. |
+| Windows, macOS | Designed here and written, but not part of this change: neither has been run on a real machine. |
+
+The notch is **off by default** (`notchEnabled`), because many people already have one, and while it is off none of it is drawn, not even a "not running" pill.
 
 ## Context
 
@@ -46,7 +54,7 @@ The pill shows the highest-priority view that applies:
 
 A newer event replaces a shown one of the same or lower priority. Durations use the dashboard's short form (`<1m`, `45m`, `3h`, `3h 17m`).
 
-Clicking the pill opens a compact panel below it: today's total, the four most-used apps with their share, and three actions: *Pause 15 min* (or *Resume*), *Focus 25 min* (or *Stop focus*) and *Open Screentime*, which launches the dashboard window. Escape or a click elsewhere closes it.
+On GNOME clicking the pill opens the Screen Time panel: the date, today's total beside one overall daily limit (the new `total` limit target: a ring and "+18m over of 4h 30m limit"), the number of apps used, the last seven days, the apps by time with their icons, and a Daily limit popover (a stepper, 1h to 8h chips, a reminder toggle, pause tracking, Remove limit and Save). The other Linux notch opens the compact panel below: today's total, the four most-used apps with their share, and three actions: *Pause 15 min* (or *Resume*), *Focus 25 min* (or *Stop focus*) and *Open Screentime*, which launches the dashboard window. Escape or a click elsewhere closes it.
 
 ### How it looks
 
@@ -57,7 +65,7 @@ Black (`#0c0a09`), white text, the bottom corners rounded and concave shoulders 
 - The notch shows app names and totals, never window titles, whatever the title setting says.
 - It holds one socket connection and redraws only when an event arrives or, for focus mode, once a second while focus is on. With nothing happening it does no work.
 - The greeting uses the account's real name as the system reports it; nothing is stored.
-- A `notchEnabled` setting (default on) turns it off everywhere; the extension and the tray process both follow it.
+- A `notchEnabled` setting (default off) turns it on and off everywhere; the extension and the tray process both follow it, and the daemon announces changes with `event.settings` so no restart is needed.
 
 ## Consequences
 
