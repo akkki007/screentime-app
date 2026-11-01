@@ -206,7 +206,7 @@ export class Notch {
     if (this._monitorsId) Main.layoutManager.disconnect(this._monitorsId);
     this._monitorsId = 0;
     if (this._root) {
-      Main.layoutManager.removeChrome(this._root);
+      this._setChrome(false);
       this._root.destroy();
       this._root = null;
     }
@@ -314,8 +314,21 @@ export class Notch {
       return Clutter.EVENT_PROPAGATE;
     });
     this._root.add_child(this._panel);
+    // Not added to the top chrome yet: see _setChrome.
+  }
 
-    Main.layoutManager.addTopChrome(this._root, { trackFullscreen: true });
+  /**
+   * Put the notch in GNOME's top chrome, or take it out. It is only in while it
+   * is shown. The layout manager sets `visible = true` on everything it tracks
+   * whenever the overview or a fullscreen window changes, which overrode our own
+   * hidden flag and made a notch that is off appear by itself. An actor that is
+   * not tracked cannot be shown by anything but us.
+   */
+  _setChrome(on) {
+    if (on === Boolean(this._inChrome)) return;
+    this._inChrome = on;
+    if (on) Main.layoutManager.addTopChrome(this._root, { trackFullscreen: true });
+    else Main.layoutManager.removeChrome(this._root);
   }
 
   _place() {
@@ -347,11 +360,14 @@ export class Notch {
     // session and the tracker then went away; a notch that is off stays gone.
     this._shown = this._shown || (this._enabled && this._client.connected);
     const visible = this._shown && (this._enabled || !this._client.connected);
-    this._root.visible = visible;
     if (!visible) {
       this._close();
+      this._root.visible = false;
+      this._setChrome(false);
       return;
     }
+    this._setChrome(true);
+    this._root.visible = true;
     const v = this._model.view(now);
     this._icon.setIcon(v.icon);
     this._text.text = v.text;
