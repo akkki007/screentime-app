@@ -44,6 +44,28 @@ function switchRow(settings, key, title, subtitle) {
   return row;
 }
 
+/** A switch that puts `value` in, or takes it out of, a string-list key. */
+function listSwitchRow(settings, key, value, title, subtitle) {
+  const row = new Adw.SwitchRow({ title, subtitle: subtitle ?? '' });
+  const sync = () => {
+    const on = settings.get_strv(key).includes(value);
+    if (row.active !== on) row.active = on;
+  };
+  sync();
+  row.connect('notify::active', () => {
+    const list = settings.get_strv(key);
+    const has = list.includes(value);
+    if (row.active && !has) settings.set_strv(key, [...list, value]);
+    if (!row.active && has)
+      settings.set_strv(
+        key,
+        list.filter((v) => v !== value),
+      );
+  });
+  settings.connect(`changed::${key}`, sync);
+  return row;
+}
+
 /** Round colour swatches for the accent, one of them always picked. */
 function accentRow(settings) {
   const row = new Adw.ActionRow({
@@ -369,6 +391,41 @@ export default class ScreentimePreferences extends ExtensionPreferences {
       ]),
     );
     page.add(shows);
+
+    const sections = new Adw.PreferencesGroup({
+      title: 'The open island shows',
+      description: 'Pick the sections you want; the rest of the island makes room.',
+    });
+    sections.add(
+      listSwitchRow(
+        settings,
+        'panel-sections',
+        'media',
+        'Now playing screen',
+        'A music button in the open island opens it: Spotify, YouTube in your browser or any player, with its controls',
+      ),
+    );
+    sections.add(
+      listSwitchRow(
+        settings,
+        'panel-sections',
+        'today',
+        'Today',
+        'Screen time, the daily limit and apps used',
+      ),
+    );
+    sections.add(listSwitchRow(settings, 'panel-sections', 'week', 'Last 7 days'));
+    sections.add(listSwitchRow(settings, 'panel-sections', 'apps', 'By app', 'Today’s top apps'));
+    sections.add(
+      listSwitchRow(
+        settings,
+        'panel-sections',
+        'sites',
+        'Top sites',
+        'Today’s time per site, from the browser extension',
+      ),
+    );
+    page.add(sections);
 
     const behaviour = new Adw.PreferencesGroup({ title: 'Behaviour' });
     behaviour.add(

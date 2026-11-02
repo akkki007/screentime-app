@@ -23,6 +23,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { DaemonClient } from './daemonClient.js';
+import { Media } from './media.js';
 import { NotchModel, formatShort } from './notch.js';
 import { Ring, StatsPanel, appIcon } from './notchPanel.js';
 import { PANEL_WIDTH, SHOULDER, css, theme, unit } from './palette.js';
@@ -212,6 +213,11 @@ export class Notch {
     this._timers = new Map();
     this._springs = { w: new Spring(0), h: new Spring(0), r: new Spring(0) };
     this._applied = { r: -1, floating: null };
+    this._media = new Media(() => this._onMedia());
+    this._page = 'stats'; // or 'media': which screen the open island shows
+    this._mediaChoice = null; // the player picked by hand, if any
+    this._closedAt = 0;
+    this._sites = [];
     this._client = new DaemonClient({
       onNotification: (method, params) => this._onNotification(method, params),
       onState: (connected) => this._onState(connected),
@@ -234,12 +240,14 @@ export class Notch {
       if (this._cfg.monitor === 'active' && this._mode === 'compact') this._layout(true);
     });
     this._client.start();
+    if (this._cfg.sections.includes('media')) this._media.start();
     this._redraw();
   }
 
   disable() {
     this._collapse(true);
     this._client.stop();
+    this._media.stop();
     for (const id of this._timers.values()) GLib.source_remove(id);
     this._timers.clear();
     this._timeline?.stop();
@@ -311,6 +319,7 @@ export class Notch {
       reserve: s.get_boolean('reserve-space'),
       greeting: s.get_boolean('greeting'),
       nickname: s.get_string('nickname').trim(),
+      sections: s.get_strv('panel-sections'),
     };
     // In the bar, an island the bar's own colour would be invisible: it is a black notch there.
     const style =
@@ -327,6 +336,15 @@ export class Notch {
     if (['style', 'accent', 'size'].includes(key)) this._restyle();
     if (key === 'open-on' && this._openedBy === 'hover' && this._cfg.openOn === 'click')
       this._collapse();
+    if (key === 'panel-sections') {
+      // Watch players only while their card is wanted.
+      const wants = this._cfg.sections.includes('media');
+      if (wants && !before.sections.includes('media')) this._media.start();
+      if (!wants && before.sections.includes('media')) this._media.stop();
+      if (this._cfg.sections.includes('sites')) this._refreshToday().catch(() => {});
+      this._fillPanel(false);
+      if (this._mode === 'open') this._layout();
+    }
     if (before.placement !== this._cfg.placement) {
       this._applied.floating = null;
       this._restyle(); // the match style resolves differently in the bar
@@ -376,6 +394,12 @@ export class Notch {
       onSaveLimit: (minutes, overlay) => this._saveLimit(minutes, overlay),
       onRemoveLimit: () => this._removeLimit(),
       onTogglePause: () => this._togglePause(),
+      onMedia: (action, player) => this._media[action](player),
+      onPage: (page) => this._turnTo(page),
+      onPlayer: (player) => {
+        this._mediaChoice = player;
+        this._refreshPanel();
+      },
     });
     this._panel = this._stats.actor;
     for (const layer of [this._compact, this._peek, this._panel]) {
@@ -740,6 +764,7 @@ export class Notch {
     this._cancel('hover');
     this._cancel('collapse');
     this._openedBy = by;
+    if (this._closedAt && Date.now() - this._closedAt > 5 * 60000) this._page = 'stats';
     this._fillPanel(); // cheap when the prewarmed panel is current
     this._setMode('open');
     this._layout();
@@ -780,6 +805,7 @@ export class Notch {
     if (this._mode !== 'open') return;
     this._stats.closePopover();
     this._openedBy = null;
+    this._closedAt = Date.now();
     this._setMode('compact');
     if (!now) this._redraw();
   }
@@ -824,6 +850,11 @@ export class Notch {
     if (button === 3 && this._mode === 'peek') {
       this._model.temp = null; // right-click puts an alert away
       this._redraw();
+      return Clutter.EVENT_STOP;
+    }
+    if (button === 2) {
+      const m = this._media.current();
+      if (m) this._media.playPause(m.name);
       return Clutter.EVENT_STOP;
     }
     if (button !== 1) return Clutter.EVENT_PROPAGATE;
@@ -878,7 +909,7 @@ export class Notch {
     this._updateClock();
 
     let next = this._model.nextChange(now);
-    if (this._cfg.center === 'clock' && v.kind === 'idle') {
+    if ((this._cfg.center === 'clock' && v.kind === 'idle') || this._mode === 'open') {
       const minute = (Math.floor(now / 60000) + 1) * 60000;
       if (!next || minute < next) next = minute;
     }
@@ -960,13 +991,12 @@ export class Notch {
     const avg = spent.length ? spent.reduce((sum, d) => sum + d.ms, 0) / spent.length : 0;
     const rebuilt = this._stats.update({
       dateLabel: GLib.DateTime.new_now_local().format('%a, %-d %b'),
-      tracking: !this._client.connected
-        ? 'Offline'
-        : st?.paused
-          ? 'Paused'
-          : st?.idle
-            ? 'Idle'
-            : 'Tracking',
+      timeLabel: this._clockText(),
+      sections: this._cfg.sections,
+      page: this._cfg.sections.includes('media') ? this._page : 'stats',
+      media: this._cfg.sections.includes('media') ? this._mediaData() : null,
+      players: this._cfg.sections.includes('media') ? this._players() : [],
+      sites: this._sitesData(),
       totalMs: total,
       total: formatShort(total),
       appsUsed: m.apps.filter((a) => a.ms > 0).length,
@@ -983,6 +1013,54 @@ export class Notch {
     });
     if (loadWeek) this._loadWeek();
     return rebuilt;
+  }
+
+  /** What is playing, trimmed to what the card draws (so unrelated changes don't rebuild it). */
+  _mediaData() {
+    const all = this._media.all();
+    const m = all.find((p) => p.name === this._mediaChoice) ?? this._media.current();
+    if (!m) return null;
+    const { name, identity, desktopEntry, title, artist, artPath, status, canNext, canPrevious } =
+      m;
+    return { name, identity, desktopEntry, title, artist, artPath, status, canNext, canPrevious };
+  }
+
+  _sitesData() {
+    if (!this._cfg.sections.includes('sites')) return [];
+    const total = this._sites.reduce((n, r) => n + r.ms, 0);
+    return this._sites.slice(0, 4).map((r) => ({
+      domain: r.key,
+      time: formatShort(r.ms),
+      percent: total > 0 ? Math.round((r.ms * 100) / total) : 0,
+    }));
+  }
+
+  /** The players to switch between, trimmed to what the switch draws. */
+  _players() {
+    // A fixed order, so the chips don't trade places under the pointer.
+    return this._media
+      .all()
+      .map(({ name, identity, desktopEntry, status }) => ({ name, identity, desktopEntry, status }))
+      .sort((a, b) => a.identity.localeCompare(b.identity) || a.name.localeCompare(b.name));
+  }
+
+  /** Show the other screen of the open island. */
+  _turnTo(page) {
+    this._page = page;
+    this._refreshPanel();
+  }
+
+  /** Rebuild the panel if its data changed, and let the shape follow its new size. */
+  _refreshPanel() {
+    const rebuilt = this._fillPanel(false);
+    if (rebuilt && this._mode === 'open') this._layout();
+  }
+
+  /** A player changed: refresh the card if it is open (or prebuilt), cheaply. */
+  _onMedia() {
+    if (!this._root) return;
+    const rebuilt = this._fillPanel(false);
+    if (rebuilt && this._mode === 'open') this._layout();
   }
 
   /** Build the panel ahead of time while closed, so opening never has to. */
@@ -1157,6 +1235,15 @@ export class Notch {
       return { appId: r.key, name, ms: r.ms };
     });
     this._model.setToday(apps);
+    if (this._cfg.sections.includes('sites')) {
+      try {
+        this._sites =
+          (await this._client.call('usage.web', { from: midnight, to: now.getTime() + 60000 })) ??
+          [];
+      } catch (_e) {
+        this._sites = [];
+      }
+    }
     this._later('minute', 60000, () => {
       this._refreshToday().then(
         () => this._redraw(),

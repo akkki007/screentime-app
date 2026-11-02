@@ -58,40 +58,6 @@ export const Ring = GObject.registerClass(
   },
 );
 
-/** The logo: a rounded square with a clock, in the theme's text colour. */
-const Logo = GObject.registerClass(
-  class ScreentimeIslandLogo extends St.DrawingArea {
-    _init(t) {
-      super._init({ width: 30, height: 30, y_align: Clutter.ActorAlign.CENTER });
-      this._t = t;
-    }
-
-    vfunc_repaint() {
-      const cr = this.get_context();
-      const t = this._t;
-      cr.setSourceRGBA(...unit(t.fg));
-      const r = 9;
-      const s = 30;
-      cr.arc(s - r, r, r, -Math.PI / 2, 0);
-      cr.arc(s - r, s - r, r, 0, Math.PI / 2);
-      cr.arc(r, s - r, r, Math.PI / 2, Math.PI);
-      cr.arc(r, r, r, Math.PI, 1.5 * Math.PI);
-      cr.closePath();
-      cr.fill();
-      cr.setSourceRGBA(...unit(t.bg));
-      cr.setLineWidth(2.2);
-      cr.setLineCap(1);
-      cr.arc(15, 15, 7, 0, 2 * Math.PI);
-      cr.stroke();
-      cr.moveTo(15, 11);
-      cr.lineTo(15, 15);
-      cr.lineTo(18, 16.8);
-      cr.stroke();
-      cr.$dispose();
-    }
-  },
-);
-
 /** An app's icon from its .desktop file, or its initial on a tile. */
 export function appIcon(appId, name, size, t) {
   const app =
@@ -116,18 +82,26 @@ export function appIcon(appId, name, size, t) {
   });
 }
 
-function iconButton(iconName, t, onClick, accessible) {
+/**
+ * A round icon button for the header. `on`: the page it opens is showing;
+ * `tint`: a colour for the icon (the accent while music plays).
+ */
+function iconButton(iconName, t, onClick, accessible, { on = false, tint = null } = {}) {
   const b = new St.Button({
     reactive: true,
     can_focus: true,
     track_hover: true,
     accessible_name: accessible,
-    style: `border-radius: 15px; padding: 7px; color: ${css(t.muted)};`,
+    y_align: Clutter.ActorAlign.CENTER,
     child: new St.Icon({ icon_name: iconName, icon_size: 16 }),
   });
-  b.connect('notify::hover', () => {
-    b.style = `border-radius: 15px; padding: 7px; color: ${css(b.hover ? t.fg : t.muted)}; background-color: ${b.hover ? css(t.raised) : 'transparent'};`;
-  });
+  const paint = () => {
+    const fg = tint ?? (on || b.hover ? t.fg : t.muted);
+    const bg = on ? t.raised : b.hover ? t.card : null;
+    b.style = `border-radius: 16px; padding: 8px; color: ${css(fg)}; background-color: ${bg ? css(bg) : 'transparent'};`;
+  };
+  paint();
+  b.connect('notify::hover', paint);
   b.connect('clicked', onClick);
   return b;
 }
@@ -162,7 +136,9 @@ function switchActor(on, t, onToggle) {
 export class StatsPanel {
   /**
    * @param {{onClose: () => void, onSettings: () => void, onSaveLimit: (minutes: number, overlay: boolean) => void,
-   *          onRemoveLimit: () => void, onTogglePause: () => void}} h
+   *          onRemoveLimit: () => void, onTogglePause: () => void,
+   *          onMedia: (action: 'playPause' | 'next' | 'previous', player: string) => void,
+   *          onPage: (page: 'stats' | 'media') => void, onPlayer: (player: string) => void}} h
    */
   constructor(h) {
     this._h = h;
@@ -188,7 +164,7 @@ export class StatsPanel {
   }
 
   /**
-   * @param {{dateLabel: string, tracking: string, totalMs: number, total: string, appsUsed: number,
+   * @param {{dateLabel: string, timeLabel: string, page: string, totalMs: number, total: string, appsUsed: number,
    *          limit: ?{id: number, dailyMs: number, action: string}, days: {label: string, ms: number, today: boolean}[],
    *          avg: string, apps: {appId: string, name: string, time: string, percent: number}[], paused: boolean}} d
    */
@@ -197,16 +173,59 @@ export class StatsPanel {
     const key = JSON.stringify(d);
     if (!force && key === this._key) return false;
     this._key = key;
+    const turned = this._data && this._data.page !== d.page;
     this._data = d;
     this.closePopover();
     this._body.destroy_all_children();
     this._body.add_child(this._header(d));
-    this._body.add_child(this._todayCard(d));
-    const grid = row('spacing: 10px; margin-top: 10px;', { x_expand: true });
-    grid.add_child(this._weekCard(d));
-    grid.add_child(this._appsCard(d));
-    this._body.add_child(grid);
+    if (turned) this._slideIn(d.page === 'media' ? 1 : -1);
+    if (d.page === 'media') {
+      this._today = null;
+      this._body.add_child(this._mediaScreen(d));
+      return true;
+    }
+    // The sections the user chose (Settings → The open island shows), in a fixed order.
+    const on = new Set(d.sections);
+    const blocks = [];
+    this._today = on.has('today') ? this._todayCard(d) : null;
+    if (this._today) blocks.push(this._today);
+    const small = [];
+    if (on.has('week')) small.push(this._weekCard(d));
+    if (on.has('apps')) small.push(this._appsCard(d));
+    if (on.has('sites')) small.push(this._sitesCard(d));
+    // the smaller cards two to a row; an odd one out takes the whole row
+    for (let i = 0; i < small.length; i += 2) {
+      const pair = row('spacing: 10px;', { x_expand: true });
+      for (const c of small.slice(i, i + 2)) pair.add_child(c);
+      blocks.push(pair);
+    }
+    blocks.forEach((b, i) => {
+      if (i > 0) b.set_style(`${b.get_style() ?? ''} margin-top: 10px;`);
+      this._body.add_child(b);
+    });
+    if (blocks.length === 0)
+      this._body.add_child(
+        label(
+          'Nothing to show. Pick sections in the island’s settings.',
+          `color: ${css(this._t.muted)}; font-size: 13px; padding: 6px 2px;`,
+        ),
+      );
     return true;
+  }
+
+  /** Turning to the other page: the new one slides in a little from its side. */
+  _slideIn(dir) {
+    const b = this._body;
+    b.remove_all_transitions();
+    if (!St.Settings.get().enable_animations) return;
+    b.opacity = 0;
+    b.translation_x = 14 * dir;
+    b.ease({
+      opacity: 255,
+      translation_x: 0,
+      duration: 220,
+      mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+    });
   }
 
   closePopover() {
@@ -222,12 +241,15 @@ export class StatsPanel {
 
   _header(d) {
     const t = this._t;
-    const h = row('spacing: 10px; padding: 0 0 10px 2px;', { y_align: Clutter.ActorAlign.CENTER });
-    h.add_child(new Logo(t));
+    const h = row('spacing: 8px; padding: 2px 0 12px 4px;', { y_align: Clutter.ActorAlign.CENTER });
     h.add_child(
-      label('Screen Time', `color: ${css(t.fg)}; font-size: 17px; font-weight: 600;`, {
-        y_align: Clutter.ActorAlign.CENTER,
-      }),
+      label(
+        d.timeLabel,
+        `color: ${css(t.fg)}; font-size: 18px; font-weight: 600; font-feature-settings: "tnum";`,
+        {
+          y_align: Clutter.ActorAlign.CENTER,
+        },
+      ),
     );
     h.add_child(
       label(d.dateLabel, `color: ${css(t.muted)}; font-size: 15px;`, {
@@ -235,26 +257,18 @@ export class StatsPanel {
       }),
     );
     h.add_child(new St.Widget({ x_expand: true }));
-    const dot =
-      d.tracking === 'Tracking'
-        ? [48, 209, 88]
-        : d.tracking === 'Paused'
-          ? [255, 159, 10]
-          : t.muted;
-    const chip = row(
-      `spacing: 6px; padding: 4px 10px; border-radius: 12px; background-color: ${css(t.raised)};`,
-      { y_align: Clutter.ActorAlign.CENTER },
-    );
-    chip.add_child(
-      new St.Widget({
-        width: 7,
-        height: 7,
-        y_align: Clutter.ActorAlign.CENTER,
-        style: `border-radius: 4px; background-color: ${css(dot)};`,
-      }),
-    );
-    chip.add_child(label(d.tracking, `color: ${css(t.fg)}; font-size: 12px;`));
-    h.add_child(chip);
+    if (d.sections.includes('media')) {
+      const music = d.page === 'media';
+      h.add_child(
+        iconButton(
+          'audio-x-generic-symbolic',
+          t,
+          () => this._h.onPage(music ? 'stats' : 'media'),
+          music ? 'Back to screen time' : 'Now playing',
+          { on: music, tint: d.media?.status === 'Playing' ? t.accent : null },
+        ),
+      );
+    }
     h.add_child(
       iconButton('emblem-system-symbolic', t, () => this._h.onSettings(), 'Island settings'),
     );
@@ -444,6 +458,249 @@ export class StatsPanel {
     return card;
   }
 
+  /** The art for a player: its cover when given as a local file, else the app's icon. */
+  _art(m, size) {
+    const t = this._t;
+    const radius = Math.round(size * 0.13);
+    if (m?.artPath)
+      return new St.Widget({
+        width: size,
+        height: size,
+        y_align: Clutter.ActorAlign.CENTER,
+        style: `border-radius: ${radius}px; background-image: url("file://${m.artPath}"); background-size: cover;`,
+      });
+    const app = m?.desktopEntry
+      ? Shell.AppSystem.get_default().lookup_app(`${m.desktopEntry}.desktop`)
+      : null;
+    const gicon = app?.get_icon();
+    return new St.Bin({
+      width: size,
+      height: size,
+      y_align: Clutter.ActorAlign.CENTER,
+      style: `border-radius: ${radius}px; background-color: ${css(t.raised)};`,
+      child: gicon
+        ? new St.Icon({ gicon, icon_size: Math.round(size * 0.5) })
+        : new St.Icon({
+            icon_name: 'audio-x-generic-symbolic',
+            icon_size: Math.round(size * 0.36),
+            style: `color: ${css(t.muted)};`,
+          }),
+    });
+  }
+
+  /** The Now playing screen: the cover, the track, big controls, and a switch between players. */
+  _mediaScreen(d) {
+    const t = this._t;
+    const m = d.media;
+    const card = this._card('padding: 18px;', { x_expand: true });
+    if (!m) {
+      const empty = col('spacing: 8px; padding: 26px 0;', { x_expand: true });
+      empty.add_child(
+        new St.Icon({
+          icon_name: 'audio-x-generic-symbolic',
+          icon_size: 36,
+          x_align: Clutter.ActorAlign.CENTER,
+          style: `color: ${css(t.muted)};`,
+        }),
+      );
+      empty.add_child(
+        label('Nothing playing', `color: ${css(t.fg)}; font-size: 16px; font-weight: 600;`, {
+          x_align: Clutter.ActorAlign.CENTER,
+        }),
+      );
+      empty.add_child(
+        label(
+          'Play something in Spotify, or a video in your browser.',
+          `color: ${css(t.muted)}; font-size: 13px;`,
+          {
+            x_align: Clutter.ActorAlign.CENTER,
+          },
+        ),
+      );
+      card.add_child(empty);
+      return card;
+    }
+
+    const line = row('spacing: 20px;', { x_expand: true });
+    line.add_child(this._art(m, 132));
+    const words = col('spacing: 4px;', { x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+    const app = row('spacing: 6px;');
+    const appGicon = m.desktopEntry
+      ? Shell.AppSystem.get_default().lookup_app(`${m.desktopEntry}.desktop`)?.get_icon()
+      : null;
+    if (appGicon)
+      app.add_child(
+        new St.Icon({ gicon: appGicon, icon_size: 14, y_align: Clutter.ActorAlign.CENTER }),
+      );
+    app.add_child(
+      label(m.identity, `color: ${css(t.muted)}; font-size: 12px;`, {
+        y_align: Clutter.ActorAlign.CENTER,
+      }),
+    );
+    words.add_child(app);
+    const title = label(
+      m.title || m.identity,
+      `color: ${css(t.fg)}; font-size: 21px; font-weight: 700;`,
+    );
+    title.clutter_text.ellipsize = 3;
+    words.add_child(title);
+    if (m.artist) {
+      const by = label(m.artist, `color: ${css(t.muted)}; font-size: 15px;`);
+      by.clutter_text.ellipsize = 3;
+      words.add_child(by);
+    }
+
+    const control = (icon, accessible, action, enabled, size) => {
+      const primary = action === 'playPause';
+      const b = new St.Button({
+        reactive: enabled,
+        can_focus: enabled,
+        track_hover: true,
+        accessible_name: accessible,
+        width: size,
+        height: size,
+        y_align: Clutter.ActorAlign.CENTER,
+        child: new St.Icon({ icon_name: icon, icon_size: primary ? 22 : 18 }),
+      });
+      const paint = () => {
+        const bg = primary ? t.accent : b.hover && enabled ? t.raised : null;
+        const fg = primary ? t.onAccent : enabled ? t.fg : t.track;
+        b.style = `border-radius: ${size / 2}px; color: ${css(fg)}; background-color: ${bg ? css(bg) : 'transparent'};`;
+      };
+      paint();
+      b.connect('notify::hover', paint);
+      b.connect('clicked', () => this._h.onMedia(action, m.name));
+      return b;
+    };
+    const playing = m.status === 'Playing';
+    const controls = row('spacing: 10px; margin-top: 14px;', {
+      y_align: Clutter.ActorAlign.CENTER,
+    });
+    controls.add_child(
+      control('media-skip-backward-symbolic', 'Previous', 'previous', m.canPrevious, 44),
+    );
+    controls.add_child(
+      control(
+        playing ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic',
+        playing ? 'Pause' : 'Play',
+        'playPause',
+        true,
+        56,
+      ),
+    );
+    controls.add_child(control('media-skip-forward-symbolic', 'Next', 'next', m.canNext, 44));
+    words.add_child(controls);
+    line.add_child(words);
+    card.add_child(line);
+
+    // More than one player (say Spotify and YouTube in a browser): pick which one to control.
+    if (d.players.length > 1) {
+      const pick = row('spacing: 6px; margin-top: 14px;', { x_expand: true });
+      for (const p of d.players) {
+        const chosen = p.name === m.name;
+        const chip = row('spacing: 6px;');
+        const g = p.desktopEntry
+          ? Shell.AppSystem.get_default().lookup_app(`${p.desktopEntry}.desktop`)?.get_icon()
+          : null;
+        if (g)
+          chip.add_child(
+            new St.Icon({ gicon: g, icon_size: 14, y_align: Clutter.ActorAlign.CENTER }),
+          );
+        chip.add_child(
+          label(p.identity, `color: ${css(chosen ? t.fg : t.muted)}; font-size: 12px;`, {
+            y_align: Clutter.ActorAlign.CENTER,
+          }),
+        );
+        if (p.status === 'Playing')
+          chip.add_child(
+            new St.Widget({
+              width: 6,
+              height: 6,
+              y_align: Clutter.ActorAlign.CENTER,
+              style: `border-radius: 3px; background-color: ${css(t.accent)};`,
+            }),
+          );
+        const b = new St.Button({
+          reactive: true,
+          can_focus: true,
+          track_hover: true,
+          child: chip,
+          accessible_name: `Control ${p.identity}`,
+        });
+        const paint = () => {
+          const bg = chosen ? t.raised : b.hover ? t.card : null;
+          b.style = `border-radius: 14px; padding: 6px 12px; background-color: ${bg ? css(bg) : 'transparent'}; border: 1px solid ${css(t.line)};`;
+        };
+        paint();
+        b.connect('notify::hover', paint);
+        b.connect('clicked', () => this._h.onPlayer(p.name));
+        pick.add_child(b);
+      }
+      card.add_child(pick);
+    }
+    return card;
+  }
+
+  _sitesCard(d) {
+    const t = this._t;
+    const card = this._card('padding: 14px 10px 10px 10px; spacing: 2px;', { x_expand: true });
+    card.add_child(
+      label('Top sites', `color: ${css(t.muted)}; font-size: 13px; padding: 0 6px 4px 6px;`),
+    );
+    if (d.sites.length === 0)
+      card.add_child(
+        label(
+          'No sites yet. The browser extension adds time per site.',
+          `color: ${css(t.muted)}; font-size: 13px; padding: 8px 6px;`,
+        ),
+      );
+    for (const site of d.sites.slice(0, 4)) {
+      const item = row('spacing: 10px; padding: 5px 6px; border-radius: 12px;', { x_expand: true });
+      item.add_child(
+        new St.Bin({
+          width: 26,
+          height: 26,
+          y_align: Clutter.ActorAlign.CENTER,
+          style: `border-radius: 8px; background-color: ${css(t.raised)};`,
+          child: new St.Icon({
+            icon_name: 'web-browser-symbolic',
+            icon_size: 15,
+            style: `color: ${css(t.muted)};`,
+          }),
+        }),
+      );
+      const mid = col('spacing: 5px;', { x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+      const name = label(site.domain, `color: ${css(t.fg)}; font-size: 13px;`);
+      name.clutter_text.ellipsize = 3;
+      mid.add_child(name);
+      const track = new St.Widget({
+        height: 3,
+        style: `background-color: ${css(t.track)}; border-radius: 2px;`,
+      });
+      const fill = new St.Widget({
+        height: 3,
+        style: `background-color: ${css(t.accent)}; border-radius: 2px;`,
+      });
+      track.add_child(fill);
+      track.connect('notify::width', () =>
+        fill.set_width(Math.max(3, (track.width * Math.max(site.percent, 1)) / 100)),
+      );
+      mid.add_child(track);
+      item.add_child(mid);
+      item.add_child(
+        label(
+          site.time,
+          `color: ${css(t.fg)}; font-size: 13px; font-weight: 600; font-feature-settings: "tnum";`,
+          {
+            y_align: Clutter.ActorAlign.CENTER,
+          },
+        ),
+      );
+      card.add_child(item);
+    }
+    return card;
+  }
+
   // ---- the daily limit popover -------------------------------------------
 
   _togglePopover() {
@@ -472,7 +729,9 @@ export class StatsPanel {
         reactive: true,
       },
     );
-    pop.set_style(`${pop.style} margin-top: 112px;`);
+    // just under the Today card, wherever the chosen sections put it
+    const below = this._today ? Math.round(this._today.y + this._today.height) - 6 : 112;
+    pop.set_style(`${pop.style} margin-top: ${below}px;`);
     pop.add_child(label('Daily limit', `color: ${css(t.muted)}; font-size: 13px;`));
 
     const value = label(

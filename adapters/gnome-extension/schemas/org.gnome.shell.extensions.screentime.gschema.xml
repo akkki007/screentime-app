@@ -54,6 +54,13 @@
       <description>A ring for the daily limit (when one is set), or nothing.</description>
     </key>
 
+    <!-- What the open island shows -->
+    <key name="panel-sections" type="as">
+      <default>['media', 'today', 'week', 'apps']</default>
+      <summary>Sections of the open island</summary>
+      <description>Any of: media (what is playing, with controls), today, week, apps, sites. Shown in that order.</description>
+    </key>
+
     <!-- Behaviour -->
     <key name="open-on" type="s">
       <choices><choice value="hover"/><choice value="click"/></choices>

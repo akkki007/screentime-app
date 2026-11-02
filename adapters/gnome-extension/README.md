@@ -16,8 +16,11 @@ A GJS (ESM, GNOME 45+) Shell extension, shown as **Screentime** in the Extension
 | `palette.js` | Styles, accents and sizes, shared by the Shell and the settings window |
 | `prefs.js`, `schemas/` | The settings window (gear in the Extensions app, or in the open island) and its GSettings schema |
 | `daemonClient.js` | The JSON-RPC client for the tracker's socket |
+| `media.js`, `mediaRules.js` | "Now playing": reads any MPRIS player (Spotify, YouTube and other sites in a browser, music apps) and sends play/pause, next and previous |
 
 Rest the pointer on it to open it (or click, if set so); it closes 300 ms after the pointer leaves, or with Escape or a click elsewhere when it was opened by a click. Resting on an alert holds it; a right-click puts it away. If the tracker stops while the island is in use, it tries once to start `screentime-daemon.service`, then shows "Screentime is not running" (click it to try again).
+
+**The open island** shows the time and date, then the sections chosen in its settings: *Today*, *Last 7 days*, *By app* and *Top sites* (time per site from the browser extension). The music button beside the gear turns to the *Now playing* screen: the cover (or the player's icon), the track, play/pause, next and previous, and a switch between players when several are open (say Spotify and YouTube in a browser). Middle-click the island to play or pause. Cover art is shown only when a player gives a local file (browsers do); a web address, like Spotify's, is never fetched, so the extension still makes no network requests.
 
 **Settings** (all live, no restart): style (match the top bar, black, graphite, light), accent colour, size, placement (attached to the bar or floating below it), what the closed island shows on the left, in the middle and on the right, open on hover or click and the hover delay, motion (playful, calm, off; the system's reduce-motion setting always wins), display (main or the one in use), keep windows clear of the island, alerts in the island, the greeting and what to call you.
 
